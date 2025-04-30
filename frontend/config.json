@@ -171,7 +171,7 @@
       "type": "function"
     }
   ],
-  "URL_IPFS": "http://127.0.0.1:5001",
-  "URL_RPC": "http://127.0.0.1:8548/",
-  "URL_BACKEND": "http://localhost:4000/"
+  "URL_IPFS": "https://scaling-guacamole-wr5vvwv6pj6pfg466-5001.app.github.dev/",
+  "URL_RPC": "https://scaling-guacamole-wr5vvwv6pj6pfg466-8548.app.github.dev/",
+  "URL_BACKEND": "https://scaling-guacamole-wr5vvwv6pj6pfg466-4000.app.github.dev/"
 }
