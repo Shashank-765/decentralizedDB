@@ -1,11 +1,13 @@
 import { useState, useEffect } from "react";
 import { ethers } from "ethers";
+import { useNavigate } from "react-router-dom";
 import config from "../../config.json";
 import './footer.css'
 import { Link } from "react-router-dom";
 const provider = new ethers.providers.JsonRpcProvider(config.URL_RPC);
 
 export default function UserProfile() {
+  const navigate = useNavigate();
   const [files, setFiles] = useState<string[]>([]);
   const [user, setUser] = useState<{ name: string; email: string; walletAddress: string } | null>(null);
   const [loading, setLoading] = useState(true);
@@ -81,10 +83,13 @@ export default function UserProfile() {
                   }}    
                 />
                 <a
-                  href={`https://ipfs.io/ipfs/${file}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition"
+                  // href={`https://ipfs.io/ipfs/${file}`}
+                  // target="_blank"
+                  // rel="noopener noreferrer"
+                  // className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition"
+                  onClick={() => {navigate('/viewDocuments', { state: { file } })}}
+                  className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition cursor-pointer"
+
                 >
                   View Document
                 </a>

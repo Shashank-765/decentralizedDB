@@ -14,10 +14,15 @@ import UserProfile from './pages/profile';
 import config from "../config.json"
 import ProtectedRoute from './pages/protectedRoutes';
 import RestrictToUsersOnly from './pages/RestrictedUserRoutes';
+import ViewDocuments from './pages/viewDocuments';
 import NotFound from './pages/notFound'
 
 function App() {
   const [books, setBooks] = useState<Book[]>([]);
+  const [user, setUser] = useState<any>(null);
+  let userString = localStorage.getItem("user");
+
+  setUser(userString ? JSON.parse(userString) : null);
 
   useEffect(() => {
     console.log("Fetching Books...", books);
@@ -28,8 +33,7 @@ function App() {
     };
     getBooks();
   }, []);
-  const userString = localStorage.getItem("user");
-  let user = userString ? JSON.parse(userString) : null;
+
   // ✅ Animated Title and Favicon
   useEffect(() => {
     const frames = [
@@ -54,11 +58,11 @@ function App() {
 
     let index = 0;
     const interval = setInterval(() => {
-      document.title = frames[index].title; // Update tab title
+      document.title = frames[index].title;
 
       const favicon = document.querySelector("link[rel='shortcut icon']");
       if (favicon) {
-        favicon.setAttribute("href", frames[index].favicon); // Update favicon
+        favicon.setAttribute("href", frames[index].favicon);
       }
 
       index = (index + 1) % frames.length;
@@ -94,60 +98,64 @@ function App() {
 
     // </Router>
 
-<Router>
-     <ToastContainer />
-     <Header />
-    <Routes>
-      <Route path="/" element={<Homepage />} />
-      <Route path="/home" element={<Homepage />} />
-      <Route
-        path="/upload"
-        element={
-          <RestrictToUsersOnly user={user}>
-            <UploadPage />
-          </RestrictToUsersOnly>
-        }
-      />
+    <Router>
+      <ToastContainer />
+      <Header />
+      <Routes>
+        <Route path="/" element={<Homepage />} />
+        <Route path="/home" element={<Homepage />} />
+        <Route
+          path="/upload"
+          element={
+            <RestrictToUsersOnly user={user}>
+              <UploadPage />
+            </RestrictToUsersOnly>
+          }
+        />
 
-      <Route
-        path="/profile"
-        element={
-          <RestrictToUsersOnly user={user}>
-            <UserProfile />
-          </RestrictToUsersOnly>
-        }
-      />
+        <Route
+          path="/profile"
+          element={
+            <RestrictToUsersOnly user={user}>
+              <UserProfile />
+            </RestrictToUsersOnly>
+          }
+        />
 
-      <Route
-        path="/edit"
-        element={
-          <RestrictToUsersOnly user={user}>
-            <Edit />
-          </RestrictToUsersOnly>
-        }
-      />
+        <Route
+          path="/edit"
+          element={
+            <RestrictToUsersOnly user={user}>
+              <Edit />
+            </RestrictToUsersOnly>
+          }
+        />
 
-      <Route
-        path="/forgotpass"
-        element={
-          <RestrictToUsersOnly user={user}>
-            <ForgotPassword />
-          </RestrictToUsersOnly>
-        }
-      />
-      <Route
-        path="/dashboard"
-        element={
-          <ProtectedRoute user={user} allowedTypes={["Admin"]}>
-            <UserDashboard />
-          </ProtectedRoute>
-        }
-      />
-      <Route path="/not-found" element={<NotFound />} />
-      <Route path="*" element={<NotFound />} />
-    </Routes>
-    <Footer />
-</Router>
+        <Route
+          path="/forgotpass"
+          element={
+            <RestrictToUsersOnly user={user}>
+              <ForgotPassword />
+            </RestrictToUsersOnly>
+          }
+        />
+        <Route
+          path='/viewdocuments'
+          element={<ViewDocuments />}
+        />
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute user={user} allowedTypes={["Admin"]}>
+              <UserDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="/not-found" element={<NotFound />} />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+      <Footer />
+    </Router>
   );
 }
 

@@ -15,7 +15,7 @@ export default function UserDashboard() {
   const [selectedFiles, setSelectedFiles] = useState<any[]>([]);
   const [selectedUser, setSelectedUser] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
-
+  console.log(`hi`)
   // Pagination States
   const [currentPage, setCurrentPage] = useState(1);
   const usersPerPage = 10;

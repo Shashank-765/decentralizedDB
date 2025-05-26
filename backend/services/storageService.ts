@@ -10,8 +10,6 @@ export const UploadDocs = async (name: string, email: string, password: string):
         throw new Error("User Doesn't exists");
     }
 
-    
-
     const user = new User({ name, email, password });
     await user.save();
 
