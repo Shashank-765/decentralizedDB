@@ -4,11 +4,12 @@ import CryptoJS from 'crypto-js';
 import { useLocation } from 'react-router-dom';
 
 const ipfs = create({ url: 'http://127.0.0.1:5001' });
-const ENCRYPTION_KEY = 'your-32-char-secret-key-123456789012';
+const ENCRYPTION_KEY = 'your-32-char-secret-key-123456789012'; // Use a strong key in real apps
 
 interface DecryptedFile {
     url: string;
     name: string;
+    mimeType: string;
 }
 
 export default function ViewDocuments() {
@@ -17,66 +18,66 @@ export default function ViewDocuments() {
     const [documents, setDocuments] = useState<DecryptedFile[]>([]);
     const [loading, setLoading] = useState(true);
 
-    const decryptFile = (encryptedBase64: string, mimeType: string): Blob => {
+    const decryptFile = (encryptedText: string): { blob: Blob | null, mimeType: string } => {
         try {
-            const decrypted = CryptoJS.AES.decrypt(encryptedBase64, ENCRYPTION_KEY);
-            const base64Str = decrypted.toString(CryptoJS.enc.Utf8);
-            if (!base64Str) throw new Error('Invalid decrypted string');
+            const decrypted = CryptoJS.AES.decrypt(encryptedText, ENCRYPTION_KEY);
+            const payload = decrypted.toString(CryptoJS.enc.Utf8);
 
-            const binaryStr = atob(base64Str);
-            const byteArray = new Uint8Array(binaryStr.length);
-            for (let i = 0; i < binaryStr.length; i++) {
-                byteArray[i] = binaryStr.charCodeAt(i);
-            }
+            if (!payload || !payload.includes('::')) throw new Error('Invalid encrypted format');
 
-            return new Blob([byteArray], { type: mimeType });
+            const [mimeType, base64Str] = payload.split('::');
+
+            const byteCharacters = atob(base64Str);
+            const byteNumbers = Array.from(byteCharacters).map((char) => char.charCodeAt(0));
+            const byteArray = new Uint8Array(byteNumbers);
+
+            return {
+                blob: new Blob([byteArray], { type: mimeType }),
+                mimeType,
+            };
         } catch (err) {
-            console.error('Decryption failed:', err);
-            return new Blob(['[Failed to decrypt]'], { type: 'text/plain' });
+            console.error('❌ Decryption failed:', err);
+            return { blob: null, mimeType: 'text/plain' };
         }
     };
 
-
-
     const fetchFiles = async () => {
-        const allDecryptedFiles: DecryptedFile[] = [];
+        const result: DecryptedFile[] = [];
+
         try {
             for await (const fileInfo of ipfs.ls(file)) {
                 if (fileInfo.type === 'file') {
                     const chunks: Uint8Array[] = [];
+
                     for await (const chunk of ipfs.cat(fileInfo.cid)) {
                         chunks.push(chunk);
                     }
 
-                    const combined = new Uint8Array(chunks.reduce((acc, c) => acc + c.length, 0));
+                    const totalSize = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
+                    const combined = new Uint8Array(totalSize);
                     let offset = 0;
                     for (const chunk of chunks) {
                         combined.set(chunk, offset);
                         offset += chunk.length;
                     }
 
-                    const encryptedBase64 = new TextDecoder().decode(combined);
-                    // Infer mimeType from file extension or default to 'application/octet-stream'
-                    let mimeType = 'application/octet-stream';
-                    if (fileInfo.name.endsWith('.pdf')) mimeType = 'application/pdf';
-                    else if (fileInfo.name.match(/\.(jpg|jpeg)$/i)) mimeType = 'image/jpeg';
-                    else if (fileInfo.name.match(/\.(png)$/i)) mimeType = 'image/png';
-                    else if (fileInfo.name.match(/\.(gif)$/i)) mimeType = 'image/gif';
+                    const encryptedText = new TextDecoder().decode(combined);
+                    const { blob, mimeType } = decryptFile(encryptedText);
 
-                    const decryptedBlob = decryptFile(encryptedBase64, mimeType);
-                    const url = URL.createObjectURL(decryptedBlob);
-
-                    allDecryptedFiles.push({
-                        name: fileInfo.name.replace('.enc', ''),
-                        url,
-                    });
+                    if (blob) {
+                        result.push({
+                            name: fileInfo.name.replace('.enc', ''),
+                            url: URL.createObjectURL(blob),
+                            mimeType,
+                        });
+                    }
                 }
             }
         } catch (err) {
-            console.error('❌ IPFS fetch failed:', err);
+            console.error('❌ Failed to fetch files from IPFS:', err);
         }
 
-        setDocuments(allDecryptedFiles);
+        setDocuments(result);
         setLoading(false);
     };
 
@@ -86,43 +87,53 @@ export default function ViewDocuments() {
         }
     }, [file]);
 
-    const shortenName = (name: string) =>
-        name.length > 20 ? `${name.slice(0, 8)}...${name.slice(-8)}` : name;
+    // const shortenName = (name: string) =>
+    //     name.length > 20 ? `${name.slice(0, 10)}...${name.slice(-8)}` : name;
 
     return (
-        <div style={{ padding: '2rem' }}>
-            <h2 style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>📂 Files</h2>
+        <div style={{ padding: '2rem', height: '100vh', overflowY: 'auto' }}>
+            <h1 style={{ fontSize: '2rem', marginBottom: '1rem', textAlign: 'center', fontFamily: 'bold' }}>View Documents</h1>
+            {/* <h2 style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>Files</h2> */}
+
             {loading ? (
                 <p>Loading...</p>
             ) : documents.length === 0 ? (
                 <p>No files found.</p>
             ) : (
-                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem' }}>
+                <div className="flex flex-wrap gap-4">
                     {documents.map((doc, idx) => (
                         <div
                             key={idx}
-                            style={{
-                                border: '1px solid #ccc',
-                                borderRadius: '10px',
-                                padding: '1rem',
-                                backgroundColor: '#f9f9f9',
-                                width: '200px',
-                                boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
-                                textAlign: 'center',
-                                cursor: 'pointer',
-                                transition: 'transform 0.2s',
-                            }}
-                            onClick={() => window.open(doc.url, '_blank', 'noopener,noreferrer')}
-                            onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.05)')}
-                            onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                            className="border border-gray-300 rounded-xl p-4 bg-gray-100 w-full sm:w-[220px] text-center shadow-md transform transition-transform duration-200 hover:scale-105"
                         >
-                            <p style={{ fontWeight: 'bold', color: '#333', fontSize: '1rem' }}>
-                                📄<br></br> Dawnload
+                            <p className="font-semibold text-gray-700 text-sm mb-2">
                                 {/* {shortenName(doc.name)} */}
                             </p>
+
+                            {doc.mimeType.startsWith('image/') ? (
+                                <img
+                                    src={doc.url}
+                                    alt={doc.name}
+                                    className="w-full h-[150px] object-contain"
+                                />
+                            ) : doc.mimeType === 'application/pdf' ? (
+                                <iframe
+                                    src={doc.url}
+                                    title={doc.name}
+                                    className="w-full h-[150px] border-none"
+                                />
+                            ) : (
+                                <button
+                                    onClick={() => window.open(doc.url, '_blank', 'noopener,noreferrer')}
+                                    className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                                >
+                                    Open File
+                                </button>
+                            )}
                         </div>
                     ))}
                 </div>
+
             )}
         </div>
     );

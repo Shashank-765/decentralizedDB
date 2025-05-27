@@ -11,12 +11,18 @@ interface ProtectedRouteProps {
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ user, allowedTypes, children }) => {
 
-let userString = localStorage.getItem("user");
-let userObj = userString ? JSON.parse(userString) : null;
-let userType = userObj ? userObj.userType : null;
-  if (!userType || !allowedTypes.includes(userType)) {
+let effectiveUserType = user?.userType;
+
+  if (!effectiveUserType) {
+    const userString = localStorage.getItem("user");
+    const userObj = userString ? JSON.parse(userString) : null;
+    effectiveUserType = userObj?.userType || null;
+  }
+
+  if (!effectiveUserType || !allowedTypes.includes(effectiveUserType)) {
     return <Navigate to="/not-found" replace />;
   }
+
   return <>{children}</>;
 };
 

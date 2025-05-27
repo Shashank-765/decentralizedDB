@@ -122,7 +122,7 @@ export default function UploadPage() {
       console.error("Transaction Failed:", error?.reason);
     }
   };
- const encryptFile = async (file: File): Promise<File> => {
+const encryptFile = async (file: File): Promise<File> => {
   const arrayBuffer = await file.arrayBuffer();
   const binary = new Uint8Array(arrayBuffer);
 
@@ -133,12 +133,16 @@ export default function UploadPage() {
   }
   const base64 = btoa(binaryStr);
 
-  // Encrypt base64
-  const encrypted = CryptoJS.AES.encrypt(base64, ENCRYPTION_KEY).toString();
+  // Add MIME type + separator
+  const payload = `${file.type}::${base64}`;
+
+  // Encrypt payload
+  const encrypted = CryptoJS.AES.encrypt(payload, ENCRYPTION_KEY).toString();
   const blob = new Blob([encrypted], { type: 'text/plain' });
 
   return new File([blob], file.name + '.enc', { type: 'text/plain' });
 };
+
   // Simulate Upload Progress
   // const handleUpload = async() => {
   //   setIsCirculrLoading(true);

@@ -20,9 +20,18 @@ import NotFound from './pages/notFound'
 function App() {
   const [books, setBooks] = useState<Book[]>([]);
   const [user, setUser] = useState<any>(null);
-  let userString = localStorage.getItem("user");
+  useEffect(() => {
+    // Check if user is logged in
+    const userString = localStorage.getItem("user");
+    if (userString) {
+      const userObj = JSON.parse(userString);
+      setUser(userObj);
+    } else {
+      setUser(null);
+    }
+  }
 
-  setUser(userString ? JSON.parse(userString) : null);
+  , []);
 
   useEffect(() => {
     console.log("Fetching Books...", books);
