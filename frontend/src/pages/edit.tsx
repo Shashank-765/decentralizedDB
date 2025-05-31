@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
-import './footer.css'; // Make sure this file exists
+import './footer.css'; 
 import axios from "axios";
-// import { Link } from "react-router-dom";
 import ToastMessage from "./toastmessage";
 import config from "../../config.json"
 
@@ -143,7 +142,7 @@ const handleBlur = (e: React.FocusEvent<HTMLInputElement | HTMLSelectElement>) =
           value={formData.email}
           onChange={handleChange}
           onBlur={handleBlur}
-          disabled={true} // Disable email field
+          disabled={true} 
         />
         <input
           type="text"
@@ -203,9 +202,6 @@ const handleBlur = (e: React.FocusEvent<HTMLInputElement | HTMLSelectElement>) =
         <button type="submit" onClick={handleSubmit}>Save Changes</button>
       </form>
       <div> 
-      {/* <ul className={`hidden md:flex space-x-6 editbuttons`}>
-            <li><Link to="/forgotpass" className="">Forget Password ?</Link></li>
-      </ul> */}
       </div>
     </div>
   

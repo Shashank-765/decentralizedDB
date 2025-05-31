@@ -58,7 +58,7 @@ export default function UserProfile() {
           </div>
           <h2 className="mt-4 text-2xl font-bold text-gray-800">{user.name}</h2>
           <p className="text-gray-600">{user.email}</p>
-          <div className="mt-4 px-4 py-2 bg-gray-100 rounded-full text-gray-700 text-sm shadow-md walletaddressed">
+          <div className="mt-4 px-4 py-2 bg-gray-100 rounded-full text-gray-700 text-sm shadow-md walletaddressed text-center">
             Wallet: {user.walletAddress}
           </div>
         </div>

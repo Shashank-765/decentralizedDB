@@ -2,7 +2,6 @@
 .editbutton{
  text-align: right;
 }
-/* Container */
 .forgot-password-container {
   display: flex;
   justify-content: center;
@@ -12,7 +11,6 @@
   background: #f5f7fa;
 }
 
-/* Card */
 .forgotpasscard {
   background-color: #fff;
   padding: 2.5rem;
@@ -23,7 +21,6 @@
   box-sizing: border-box;
 }
 
-/* Heading */
 .forgotpassheading {
   text-align: center;
   margin-bottom: 1.5rem;
@@ -31,7 +28,6 @@
   color: #333;
 }
 
-/* Form Group */
 .form-group {
   display: flex;
   align-items: center;
@@ -39,7 +35,6 @@
   margin-bottom: 1.25rem;
 }
 
-/* Inputs */
 .inputtexts {
   width: 100%;
   padding: 12px 14px;
@@ -49,7 +44,6 @@
   box-sizing: border-box;
 }
 
-/* Show/Hide Button */
 .toggle-password {
   position: absolute;
   right: 10px;
@@ -62,7 +56,6 @@
   cursor: pointer;
 }
 
-/* Buttons */
 .verifybutton,
 .resetbuttonpass {
   width: 100%;
@@ -83,7 +76,6 @@
 }
 
 
-/* Responsive Design */
 @media (max-width: 768px) {
   .forgotpasscard {
     padding: 2rem;
@@ -121,26 +113,6 @@
     padding: 10px 12px;
   }
 }
-/* .imageadjust{
- display: flex !important;
- justify-content: space-between !important;
- border: 1px solid red !important;
- width: 100% !important;
- height: auto ;
-}
-.leftcontainerdesc{
- width: 70% !important;
- height: 100%;
-  span{
-     overflow-wrap: break-word;
-  }
-
-}
-.containerimage{
- width: 30% !important;
- height: 100%;
-} */
-
 @media screen and (max-width:800px) {
     .containerimage{
       width:60%
@@ -373,13 +345,12 @@ input[type=number] {
   justify-content: center;
 }
 
-/* Modal Box */
 .otp-modal {
   background: #fff;
-  padding: 2rem;
+  padding: 4rem;
   border-radius: 12px;
-  width: 90%;
-  max-width: 400px;
+  width: 100%;
+  max-width: 460px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
   animation: fadeIn 0.3s ease-in-out;
 }
@@ -426,7 +397,6 @@ input[type=number] {
   color: white;
 }
 
-/* Fade In Animation */
 @keyframes fadeIn {
   from {
     transform: translateY(-20px);
@@ -438,7 +408,6 @@ input[type=number] {
   }
 }
 
-/* Responsive Design */
 @media (max-width: 480px) {
   .otp-modal {
     padding: 1.5rem;
@@ -481,8 +450,7 @@ width: 100%;
     .editbuttons{
         display: block !important;
         margin-bottom: 10px;
-        /* display: flex; */
-         align-self: center;
+        align-self: center;
     }
   
 }

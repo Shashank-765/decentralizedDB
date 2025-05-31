@@ -2,7 +2,6 @@ import { useState } from "react";
 import { FaCloudUploadAlt } from "react-icons/fa";
 import { create } from "ipfs-http-client";
 import CircularLoader from "../CircularLoader/CircularLoader";
-
 import ToastMessage from "./toastmessage";
 import { ethers } from "ethers";
 import config from '../../config.json';
@@ -23,21 +22,12 @@ export default function UploadPage() {
   const [files, setFiles] = useState<File[]>([]);
   const [uploadProgress, setUploadProgress] = useState<number>(0);
   const [isCircularLoading, setIsCirculrLoading] = useState(false)
-  // Handle File & Folder Selection
   const handleFiles = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files) {
       setFiles([...files, ...Array.from(event.target.files)]);
     }
     event.target.value = '';
   };
-
-  // Handle Drag & Drop
-  // const handleDrop = (event: React.DragEvent<HTMLDivElement>) => {
-  //   event.preventDefault();
-  //   if (event.dataTransfer.files.length > 0) {
-  //     setFiles([...files, ...Array.from(event.dataTransfer.files)]);
-  //   }
-  // };
   const handleDrop = async (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
 
@@ -80,13 +70,10 @@ export default function UploadPage() {
     }
   };
 
-
   const uploadToContract = async (folderCid: any) => {
     try {
-      // Load Admin Wallet
       const adminWallet = new ethers.Wallet(config.adminPrivateKey, provider);
 
-      // Get wallet address from localStorage
       const userData = JSON.parse(localStorage.getItem("user") || "{}");
       const wallet = userData.walletAddress || "";
 
@@ -96,126 +83,43 @@ export default function UploadPage() {
         return;
       }
 
-      // Create contract instance with Admin Wallet
       const contract = new ethers.Contract(config.contractAddress, config.abi, adminWallet);
 
-      // Send the transaction
       console.log('wallet, folderCid', wallet, folderCid)
-      const tx = await contract.uploadDocument(wallet, folderCid); // Assuming `true` for `verified`
-
-      // Wait for confirmation
+      const tx = await contract.uploadDocument(wallet, folderCid);
       await tx.wait();
       setFiles([])
-      // progress = 100
-
       setUploadProgress(0);
       setIsCirculrLoading(false);
       ToastMessage("The Document uploaded Successfully", "successs", tx.hash || "")
-      // clearInterval(interval);
       console.log("Transaction Confirmed:", tx.hash);
     } catch (error: any) {
       setFiles([])
-      // progress = 100
       setIsCirculrLoading(false);
       setUploadProgress(0);
       ToastMessage(`${error?.reason}`, "error", "")
       console.error("Transaction Failed:", error?.reason);
     }
   };
-const encryptFile = async (file: File): Promise<File> => {
-  const arrayBuffer = await file.arrayBuffer();
-  const binary = new Uint8Array(arrayBuffer);
 
-  // Convert to base64
-  let binaryStr = '';
-  for (let i = 0; i < binary.length; i++) {
-    binaryStr += String.fromCharCode(binary[i]);
-  }
-  const base64 = btoa(binaryStr);
+  
+  const encryptFile = async (file: File): Promise<File> => {
+    const arrayBuffer = await file.arrayBuffer();
+    const binary = new Uint8Array(arrayBuffer);
 
-  // Add MIME type + separator
-  const payload = `${file.type}::${base64}`;
+    let binaryStr = '';
+    for (let i = 0; i < binary.length; i++) {
+      binaryStr += String.fromCharCode(binary[i]);
+    }
+    const base64 = btoa(binaryStr);
 
-  // Encrypt payload
-  const encrypted = CryptoJS.AES.encrypt(payload, ENCRYPTION_KEY).toString();
-  const blob = new Blob([encrypted], { type: 'text/plain' });
+    const payload = `${file.type}::${base64}`;
 
-  return new File([blob], file.name + '.enc', { type: 'text/plain' });
-};
+    const encrypted = CryptoJS.AES.encrypt(payload, ENCRYPTION_KEY).toString();
+    const blob = new Blob([encrypted], { type: 'text/plain' });
 
-  // Simulate Upload Progress
-  // const handleUpload = async() => {
-  //   setIsCirculrLoading(true);
-  //   if (files.length === 0) {
-  //   setIsCirculrLoading(false);
-  //   return
-  //   }
-
-  //   setUploadProgress(0);
-  //   let progress = 0;
-  //   // const interval = setInterval(async() => {
-
-  //     console.log('ipfs', ipfs)
-
-
-  //     // Upload entire folder
-  //     let folderCid ;
-  //     for await (const file of ipfs.addAll(files, { wrapWithDirectory: true })) {
-  //       // progress += 100/files.length;
-  //       folderCid   = file.cid; // The last CID corresponds to the whole folder
-  //       if(file.path != "")  {
-  //         progress += 100/files.length;
-
-  //         setUploadProgress(progress);
-
-  //       } 
-  //     } 
-  //     // window.location.reload()
-  //     if (progress == 100) {
-  //       await uploadToContract(folderCid?.toString())     
-  //     }
-
-  //   // }, 300);
-  // };
-
-
-
-
-  //   const handleUpload = async () => {
-  //   setIsCirculrLoading(true);
-
-  //   if (files.length === 0) {
-  //     setIsCirculrLoading(false);
-  //     return;
-  //   }
-
-  //   setUploadProgress(0);
-  //   let progress = 0;
-
-  //   console.log('ipfs', ipfs);
-
-  //   let folderCid;
-  //   let lastFile = null;
-
-  //   for await (const file of ipfs.addAll(files, { wrapWithDirectory: true })) {
-  //     // Added: Save last file
-  //     lastFile = file;
-  //     console.log('files', file)
-
-  //     folderCid = file.cid;
-  //     if (file.path !== "") {
-  //       progress += 100 / files.length;
-  //       setUploadProgress(progress);
-  //     }
-  //   }
-  //   //  Added: Final folderCid fix for single file (if lastFile has path, it's a single file, not a folder)
-  //   if (lastFile && lastFile.path && !lastFile.path.includes("/")) {
-  //     folderCid = lastFile.cid; // This is a single file — not a folder
-  //   }
-  //   if (progress === 100 && folderCid) {
-  //     await uploadToContract(folderCid.toString());
-  //   }
-  // };
+    return new File([blob], file.name + '.enc', { type: 'text/plain' });
+  };
   const handleUpload = async () => {
     setIsCirculrLoading(true);
 
@@ -235,35 +139,37 @@ const encryptFile = async (file: File): Promise<File> => {
 
     let folderCid: string | undefined;
     let lastFile: any = null;
+    const totalFiles = encryptedFiles.length;
+    let uploadedCount = 0;
 
     for await (const file of ipfs.addAll(encryptedFiles, { wrapWithDirectory: true })) {
       lastFile = file;
       folderCid = file.cid.toString();
 
       if (file.path !== "") {
-        progress += 100 / encryptedFiles.length;
+        uploadedCount++;
+        progress = Math.min((uploadedCount / totalFiles) * 100, 100);
         setUploadProgress(progress);
       }
     }
 
     if (lastFile?.path && !lastFile.path.includes("/")) {
-      folderCid = lastFile.cid.toString(); // single file fallback
+      folderCid = lastFile.cid.toString();
     }
 
-    if (progress === 100 && folderCid) {
-      await uploadToContract(folderCid); // your own function
+    if (progress >= 100 && folderCid) {
+      await uploadToContract(folderCid);
     }
 
     setIsCirculrLoading(false);
   };
 
+
   return (
     <div className="bg-white min-h-screen flex items-center justify-center p-6">
-      {/* Upload Card */}
       <div className="w-full max-w-4xl bg-gray-200 p-8 rounded-xl shadow-xl">
         <h2 className="text-3xl font-bold text-gray-800 text-center mb-6">Upload Files & Folders</h2>
 
-        {/* Upload Box Inside the Card */}
         <div
           className="w-full p-8 rounded-lg bg-gray-100 border-2 border-dashed border-gray-300 hover:border-indigo-500 transition-all flex flex-col items-center justify-center cursor-pointer shadow-lg"
           onDragOver={(e) => e.preventDefault()}
@@ -273,24 +179,7 @@ const encryptFile = async (file: File): Promise<File> => {
           <p className="text-gray-600 text-center ">Drag & Drop your files here</p>
           <p className="text-gray-500 text-sm">or</p>
 
-          {/* File Input */}
-          {/* <label className="mt-4 px-6 py-3 bg-indigo-500 text-white text-lg font-medium rounded-full shadow-md hover:bg-indigo-600 transition cursor-pointer">
-            Select Files / Folders
-            <input
-              type="file"
-              className="hidden"
-              multiple
-              ref={(input) => {
-                if (input) {
-                  input.setAttribute("webkitdirectory", "true");
-                  input.setAttribute("mozdirectory", "true");
-                }
-              }}
-              onChange={handleFiles}
-            />
-          </label> */}
           <div className="flex flex-col gap-4">
-            {/* 🔹 Button to select files */}
             <label className="px-6 py-3 bg-indigo-500 text-white text-lg font-medium rounded-full shadow-md hover:bg-indigo-600 transition cursor-pointer">
               Select Files
               <input
@@ -303,7 +192,6 @@ const encryptFile = async (file: File): Promise<File> => {
 
             </label>
 
-            {/* 🔹 Button to select folder */}
             <label className="px-6 py-3 bg-green-500 text-white text-lg font-medium rounded-full shadow-md hover:bg-green-600 transition cursor-pointer">
               Select Folder
               <input
@@ -323,7 +211,6 @@ const encryptFile = async (file: File): Promise<File> => {
         </div>
 
 
-        {/* Display Selected Files */}
         {files.length > 0 && (
           <div className="mt-6 bg-gray-200 p-4 rounded-lg shadow-md border">
             <h3 className="text-xl font-semibold text-gray-700 mb-3">Selected Files</h3>
@@ -337,7 +224,6 @@ const encryptFile = async (file: File): Promise<File> => {
           </div>
         )}
 
-        {/* Upload Progress Bar */}
         {uploadProgress > 0 && (
           <div className="mt-4">
             <div className="w-full bg-gray-300 rounded-full h-4">
@@ -350,7 +236,6 @@ const encryptFile = async (file: File): Promise<File> => {
           </div>
         )}
 
-        {/* Upload Button */}
         {files.length > 0 && (
           <button
             onClick={handleUpload}

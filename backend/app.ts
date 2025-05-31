@@ -11,6 +11,10 @@ import "./config/passportConfig";
 const app = express()
 connectDB()
 app.use(cors())
+// app.use(cors({
+//   origin: (origin, callback) => callback(null, origin),
+//   credentials: true
+// }));
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }));
 app.use(session({

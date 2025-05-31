@@ -15,8 +15,6 @@ export default function UserDashboard() {
   const [selectedFiles, setSelectedFiles] = useState<any[]>([]);
   const [selectedUser, setSelectedUser] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
-  console.log(`hi`)
-  // Pagination States
   const [currentPage, setCurrentPage] = useState(1);
   const usersPerPage = 10;
 
@@ -27,15 +25,11 @@ export default function UserDashboard() {
         const response = await axios.post(`${config.URL_BACKEND}api/auth/userList`);
 
         const userData = [];
-        console.log('response', response)
 
         for (let i = 0; i < response.data.user.length; i++) {
           const walletAddress = response.data.user[i].walletAddress;
-          console.log('walletAddress', walletAddress)
           // let signer =new ethers.Wallet(config.adminPrivateKey)
           const documents = await contract.viewAllDocuments(walletAddress);
-          console.log('Documents:', documents);
-                    console.log('documents', documents)
           let userFiles = documents.map((doc: any, index: number) => ({
             url: `https://ipfs.io/ipfs/${doc[0]}`,
             approved: doc[1],
@@ -73,7 +67,6 @@ export default function UserDashboard() {
       await tx.wait();
 
       ToastMessage("Document Approved Successfully", "success", tx.hash || "");
-      console.log("Transaction Confirmed:", tx.hash);
 
       setUsers((prevUsers) =>
         prevUsers.map((user) =>
@@ -98,13 +91,11 @@ export default function UserDashboard() {
   };
 
   const openModal = (user: any) => {
-    console.log('user', user)
     setSelectedFiles(user.fileLinks);
     setSelectedUser(user.walletAddress);
     setShowModal(true);
   };
 
-  // Pagination Logic
   const indexOfLastUser = currentPage * usersPerPage;
   const indexOfFirstUser = indexOfLastUser - usersPerPage;
   const currentUsers = users.slice(indexOfFirstUser, indexOfLastUser);
@@ -170,7 +161,6 @@ export default function UserDashboard() {
           </table>
         </div>
 
-        {/* Pagination Controls */}
         <div className="flex justify-between items-center mt-4">
           <button
             onClick={prevPage}
@@ -192,13 +182,6 @@ export default function UserDashboard() {
         </div>
       </div>
 
-
-
-
-
-
-      {/* File Preview Modal */}
-       {/* File Preview Modal */}
        {showModal && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
           <div className="bg-white p-6 rounded-lg shadow-xl w-1/2 max-h-[80vh] overflow-auto">

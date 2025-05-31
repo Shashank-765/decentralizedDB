@@ -21,7 +21,6 @@ function App() {
   const [books, setBooks] = useState<Book[]>([]);
   const [user, setUser] = useState<any>(null);
   useEffect(() => {
-    // Check if user is logged in
     const userString = localStorage.getItem("user");
     if (userString) {
       const userObj = JSON.parse(userString);
@@ -43,7 +42,6 @@ function App() {
     getBooks();
   }, []);
 
-  // ✅ Animated Title and Favicon
   useEffect(() => {
     const frames = [
       { title: "🌍 D", favicon: "/decentralizedDb/vite1.gif" },
@@ -81,32 +79,6 @@ function App() {
   }, []);
 
   return (
-    // <Router>
-    //   <ToastContainer />
-    //   <Header />
-    //   <Routes>
-    //     <Route path="/" element={<Homepage />} />
-    //     <Route path="/home" element={<Homepage />} />
-    //     <Route path="/upload" element={<UploadPage />} />
-    //     {/* <Route path="/dashboard" element={<UserDashboard />} /> */}
-    //     <Route path="/profile" element={<UserProfile />} />
-    //     <Route path="/edit" element={<Edit />} />
-    //     <Route path="/forgotpass" element={<ForgotPassword />} />
-    //     <Route
-    //       path="/dashboard"
-    //       element={
-    //         <ProtectedRoute user={user} allowedTypes={["Admin"]}>
-    //           <UserDashboard />
-    //         </ProtectedRoute>
-    //       }
-    //     />
-
-    //     <Route path="*" element={<NotFound />} />
-    //   </Routes>
-    //   <Footer />
-
-    // </Router>
-
     <Router>
       <ToastContainer />
       <Header />
