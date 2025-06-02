@@ -1,4 +1,4 @@
-import { HashRouter as Router, Routes, Route } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route,useLocation  } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 
 import type { Book } from './types';
@@ -42,6 +42,16 @@ function App() {
     getBooks();
   }, []);
 
+  const ScrollToTop = () => {
+    const location = useLocation();
+  
+    useEffect(() => {
+      window.scrollTo(0, 0);
+    }, [location.pathname]);
+  
+    return null;
+  };  
+
   useEffect(() => {
     const frames = [
       { title: "🌍 D", favicon: "/decentralizedDb/vite1.gif" },
@@ -80,6 +90,7 @@ function App() {
 
   return (
     <Router>
+      <ScrollToTop />
       <ToastContainer />
       <Header />
       <Routes>
