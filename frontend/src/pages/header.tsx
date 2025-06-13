@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useSearchParams } from "react-router-dom";
 import { IoClose, IoMenu } from "react-icons/io5";
 import { FcGoogle } from "react-icons/fc";
@@ -17,6 +17,8 @@ import { use } from "chai";
 
 function Header() {
   const [searchParams] = useSearchParams();
+  const [open, setOpen] = useState(false);
+  const navigate = useNavigate();
   const [isPopupOpen, setIsPopupOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<"signIn" | "signUp" | "forgotpassword" | "">("");
   const [menuOpen, setMenuOpen] = useState(false); // State for mobile menu
@@ -41,6 +43,7 @@ function Header() {
           withCredentials: true
         });
         const logedinuser = {
+          userId: res.data.user._id,
           name: res.data.user.name,
           email: res.data.user.email,
           walletAddress: res.data.user.walletAddress,
@@ -76,6 +79,10 @@ function Header() {
     };
   }, [activeTab, isPopupOpen]);
 
+  const handleClick = (type: string) => {
+    setOpen(false);
+    navigate(`/upload/${type}`);
+  };
   return (
     <>
 
@@ -98,7 +105,34 @@ function Header() {
             {user ? (
               user.userType === "User" ? (
                 <>
-                  <li><Link to="/upload" className="text-gray-700 hover:text-gray-800 text-lg w-32 h-12 flex items-center justify-center rounded-full bg-white shadow-md hover:shadow-lg transition">Upload</Link></li>
+                 <li
+                    className="relative"
+                    onMouseEnter={() => setOpen(true)}
+                    onMouseLeave={() => setOpen(false)}
+                  >
+                    <button
+                      className="text-gray-700 hover:text-gray-800 text-lg w-32 h-12 flex items-center justify-center rounded-full bg-white shadow-md hover:shadow-lg transition"
+                    >
+                      Upload
+                    </button>
+
+                    {open && (
+                      <ul className="absolute top-full ml-0 mt-0 w-36 bg-white border rounded-xl shadow-lg z-10">
+                        <li
+                          className="px-4 py-2 hover:bg-gray-100 cursor-pointer rounded-xl"
+                          onClick={() => handleClick("documents")}
+                        >
+                          Documents
+                        </li>
+                        <li
+                          className="px-4 py-2 hover:bg-gray-100 cursor-pointer rounded-xl"
+                          onClick={() => handleClick("information")}
+                        >
+                          Information
+                        </li>
+                      </ul>
+                    )}
+                  </li>
                   <li>
                     <Link
                       to="/profile"
@@ -559,12 +593,14 @@ function Header() {
         );
 
         let logedinuser = {
+          userId: response.data.user._id,
           name: response.data.user.name,
           email: response.data.user.email,
           walletAddress: response.data.user.walletAddress,
           userType: response.data.user.userType,
           token: response?.data?.user?.token
         };
+        console.log(logedinuser);
         login(logedinuser);
         setIsPopupOpen(false);
         setActiveTab("");
@@ -622,6 +658,7 @@ function Header() {
     }, []);
 
     const login = (userData: any) => {
+      console.log(userData);
       localStorage.setItem("user", JSON.stringify(userData));
       setUser(userData);
     };

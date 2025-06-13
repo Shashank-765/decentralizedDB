@@ -3,6 +3,7 @@ import {mnemonic} from "../config/config.json"
 import {ethers} from "ethers"
 import nodemailer from "nodemailer";
 import {generateAccessToken} from '../Authorization/Auth'
+import  CidUserModel ,{CIDUser} from "../models/CidUser";
  let transporter = nodemailer.createTransport({
   host: "mail.smtp2go.com",
   port: 2525,
@@ -206,6 +207,18 @@ export const loginUser = async (email: string, password: string): Promise<IUser>
     
     return user;
 };
+export const saveCID = async (userId: string, cid: string): Promise<CIDUser> => {
+    const user = new CidUserModel({ userId, cid });
+    await user.save();
+    return user;
+}
+export const getuserfilebycid = async (userId: string): Promise<CIDUser[]> => {
+      const allcid = await CidUserModel.find({ userId });
+      if (allcid.length === 0) {
+          throw new Error("No files found");
+      }
+      return allcid;
+}
 export const userList = async (): Promise<IUser[]> => {
     const users = await User.find({ userType: "User" });
 

@@ -96,14 +96,13 @@ function App() {
         <Route path="/" element={<Homepage />} />
         <Route path="/home" element={<Homepage />} />
         <Route
-          path="/upload"
+          path="/upload/:type"
           element={
             <RestrictToUsersOnly user={user}>
               <UploadPage />
             </RestrictToUsersOnly>
           }
         />
-
         <Route
           path="/profile"
           element={
