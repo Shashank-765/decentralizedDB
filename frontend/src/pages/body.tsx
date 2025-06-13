@@ -3,7 +3,7 @@ export default function Body() {
       <div className="bg-white pt-4">
         {/* Roadmap Section */}
         <div className="bg-white flex items-center justify-between ">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="max-w-7xl mx-auto px-4 sm:px-0 lg:px-8 bodycenteredcontent">
             <h2 className="text-4xl font-extrabold text-center text-gray-900 mb-12 p-8">
               Roadmap: Uploading Files in a Decentralized Way
             </h2>
@@ -41,7 +41,7 @@ export default function Body() {
             </div>
   
             {/* Second Row of Cards */}
-            <div className="flex justify-center gap-12 mt-8 pb-6">
+            <div className="flex justify-center gap-12 mt-8 pb-6 bodycontainer2">
               {/* Step 4 */}
               <div className="flex flex-col items-center p-6 bg-gray-200 shadow-xl shadow-gray-300 rounded-xl w-full md:w-1/3">
                 <div className="mb-4">

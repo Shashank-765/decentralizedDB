@@ -1,10 +1,13 @@
 import { useState, useEffect } from "react";
 import { ethers } from "ethers";
+import { useNavigate } from "react-router-dom";
 import config from "../../config.json";
-
+import './footer.css'
+import { Link } from "react-router-dom";
 const provider = new ethers.providers.JsonRpcProvider(config.URL_RPC);
 
 export default function UserProfile() {
+  const navigate = useNavigate();
   const [files, setFiles] = useState<string[]>([]);
   const [user, setUser] = useState<{ name: string; email: string; walletAddress: string } | null>(null);
   const [loading, setLoading] = useState(true);
@@ -45,6 +48,9 @@ export default function UserProfile() {
   return (
     <div className="bg-gray-200 min-h-screen flex flex-col items-center p-10">
       {/* User Profile Card */}
+      {/* Desktop Menu */}
+          <ul className={`hidden md:flex space-x-6 editbuttons`}>
+            <li><Link to="/edit" className="text-gray-700 hover:text-gray-800 text-lg w-32 h-12 flex items-center justify-center rounded-full bg-white shadow-md hover:shadow-lg transition ">edit</Link></li></ul>
       {user && (
         <div className="relative bg-white p-8 rounded-3xl shadow-2xl flex flex-col items-center w-full max-w-lg mb-8 transform transition hover:scale-105">
           <div className="w-32 h-32 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center shadow-lg">
@@ -52,7 +58,7 @@ export default function UserProfile() {
           </div>
           <h2 className="mt-4 text-2xl font-bold text-gray-800">{user.name}</h2>
           <p className="text-gray-600">{user.email}</p>
-          <div className="mt-4 px-4 py-2 bg-gray-100 rounded-full text-gray-700 text-sm shadow-md">
+          <div className="mt-4 px-4 py-2 bg-gray-100 rounded-full text-gray-700 text-sm shadow-md walletaddressed text-center">
             Wallet: {user.walletAddress}
           </div>
         </div>
@@ -77,10 +83,13 @@ export default function UserProfile() {
                   }}    
                 />
                 <a
-                  href={`https://ipfs.io/ipfs/${file}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition"
+                  // href={`https://ipfs.io/ipfs/${file}`}
+                  // target="_blank"
+                  // rel="noopener noreferrer"
+                  // className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition"
+                  onClick={() => {navigate('/viewDocuments', { state: { file } })}}
+                  className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition cursor-pointer"
+
                 >
                   View Document
                 </a>

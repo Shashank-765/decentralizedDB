@@ -1,12 +1,13 @@
 import { FaTwitter, FaLinkedin, FaGithub } from "react-icons/fa";
+import "./footer.css"
 
 export default function Footer() {
   return (
-    <footer className="bg-white   p-4">
-      <div className=" mx-auto bg-gray-300 shadow-gray-300 rounded-xl lg:p-4  ">
-        <div className="grid grid-cols-12 gap-12 items-center">
+    <footer className="bg-white   p-4 covercontainerfooter">
+      <div className=" mx-auto bg-gray-300 shadow-gray-300 rounded-xl lg:p-4 ">
+        <div className="grid grid-cols-12 gap-12 items-center containerfooter">
           {/* Left Section: Logo & Branding (4/12) */}
-          <div className="col-span-12 md:col-span-4 flex md:justify-center space-x-4">
+          <div className="col-span-12 md:col-span-4 flex md:justify-center space-x-4  footerupperconter1">
             <img src="/decentralizedDb/logo.gif" alt="Decentralized DB Logo" className="h-20 w-80 rounded-lg" />
             <div>
               <h2 className="text-2xl font-bold text-gray-900">Decentralized DB</h2>
@@ -15,7 +16,7 @@ export default function Footer() {
           </div>
 
           {/* Middle Section: Quick Links (4/12) */}
-          <div className="col-span-12 md:col-span-4 flex flex-row space-x-4 md:justify-center">
+          <div className="col-span-12 md:col-span-4 flex flex-row space-x-4 md:justify-center footerupperconter2">
             <a href="#" className="text-gray-800 hover:text-indigo-400 transition">Privacy Policy</a> &nbsp;
             |
             <a href="#" className="text-gray-800 hover:text-indigo-400 transition">Terms of Service</a>&nbsp;
@@ -24,7 +25,7 @@ export default function Footer() {
           </div>
 
           {/* Right Section: Social Media (2/12) */}
-          <div className="col-span-12 md:col-span-4 flex md:justify-center space-x-4">
+          <div className="col-span-12 md:col-span-4 flex md:justify-center space-x-4 footerupperconter2">
             <a href="#" className="text-gray-800 hover:text-blue-400 transition">
               <FaTwitter size={24} />
             </a>
