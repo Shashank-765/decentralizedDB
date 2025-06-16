@@ -3,7 +3,6 @@ import { useEffect, useState } from 'react';
 
 import type { Book } from './types';
 import Homepage from './pages/homepage';
-import Edit from './pages/edit';
 import ForgotPassword from './pages/forgetpassword';
 import Header from './pages/header';
 import UploadPage from './pages/upload';
@@ -111,16 +110,6 @@ function App() {
             </RestrictToUsersOnly>
           }
         />
-
-        <Route
-          path="/edit"
-          element={
-            <RestrictToUsersOnly user={user}>
-              <Edit />
-            </RestrictToUsersOnly>
-          }
-        />
-
         <Route
           path="/forgotpass"
           element={
