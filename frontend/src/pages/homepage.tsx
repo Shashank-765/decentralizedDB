@@ -8,11 +8,11 @@ export default function Homepage() {
           <div className="grid grid-cols-12 gap-8 items-center">
             {/* Left Content (8/12) */}
             <div className="pl-6 sm:pl-8 lg:pl-11 col-span-6 md:col-span-8 break-words">
-              <h1 className="text-5xl font-extrabold text-gray-900 sm:text-6xl md:text-7xl">
+              <h1 className="text-8xl mt-20 font-extrabold text-gray-900 sm:text-8xl md:text-8xl">
                 <span className="block">Redefining Data Storage</span>
                 <span className="block text-indigo-600">with Decentralization</span>
               </h1>
-              <p className="mt-4 text-xl text-gray-600 ">
+              <p className="mt-4 mb-16 text-xl text-gray-600 ">
                 Experience a future where your documents are
                 secure, verifiable, and tamper-proof. <br />
                 Our decentralized database ensures transparency,

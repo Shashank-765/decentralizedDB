@@ -113,117 +113,133 @@ export default function UserDashboard() {
   };
 
   return (
-    <div className="bg-white min-h-screen flex flex-col items-center p-6">
-      <div className="w-full max-w-5xl bg-gray-200 p-8 rounded-xl shadow-xl">
-        <h2 className="text-3xl font-bold text-gray-800 text-center mb-6">Admin Dashboard</h2>
+<div className="bg-gradient-to-b from-gray-50 to-gray-200 min-h-screen flex flex-col items-center p-6">
+  <div className="w-full max-w-6xl bg-white p-8 rounded-3xl shadow-2xl">
+    <h2 className="text-4xl font-bold text-gray-800 text-center mb-8">Admin Dashboard</h2>
 
-        <div className="overflow-x-auto">
-          <table className="w-full bg-gray-100 shadow-lg rounded-lg">
-            <thead>
-              <tr className="bg-gray-300 text-gray-700 text-lg">
-                <th className="py-3 px-3 text-left">User Name</th>
-                <th className="py-3 px-3 text-left">Email</th>
-                <th className="py-3 px-3 text-center">Folders</th>
-                <th className="py-3 px-3 text-center">Preview</th>
-                <th className="py-3 px-3 text-center">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {currentUsers.map((user) => (
-                <tr key={user.id} className="border-b border-gray-300 text-gray-700">
-                  <td className="py-3 px-4 text-left">{user.name}</td>
-                  <td className="py-3 px-4 text-left">{user.email}</td>
-                  <td className="py-3 px-4 text-center">{user.files}</td>
-                  <td className="py-3 px-4 text-center">
-                    {user.fileLinks.length > 0 && (
-                      <button
-                        onClick={() => openModal(user)}
-                        className="text-indigo-500 hover:text-indigo-700 flex justify-center items-center"
-                      >
-                        <FaEye className="mr-1" /> View Files
-                      </button>
-                    )}
-                  </td>
-                  <td className="py-3 px-4 text-center">
-                    {user.status === "Approved" ? (
-                      <span className="text-green-600 flex justify-center items-center">
-                        <FaCheckCircle className="mr-1" /> Approved
-                      </span>
-                    ) : (
-                      <span className="text-orange-500 flex justify-center items-center">
-                        <FaTimesCircle className="mr-1" /> Pending
-                      </span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+    <div className="overflow-x-auto rounded-xl">
+      <table className="w-full table-auto border-collapse shadow-md">
+        <thead className="bg-gray-100 text-gray-800 text-lg font-semibold">
+          <tr>
+            <th className="py-4 px-6 text-left">User Name</th>
+            <th className="py-4 px-6 text-left">Email</th>
+            <th className="py-4 px-6 text-center">Folders</th>
+            <th className="py-4 px-6 text-center">Preview</th>
+            <th className="py-4 px-6 text-center">Status</th>
+          </tr>
+        </thead>
+        <tbody className="text-gray-700">
+          {currentUsers.map((user) => (
+            <tr
+              key={user.id}
+              className="border-b border-gray-200 hover:bg-gray-50 transition"
+            >
+              <td className="py-4 px-6">{user.name}</td>
+              <td className="py-4 px-6">{user.email}</td>
+              <td className="py-4 px-6 text-center">{user.files}</td>
+              <td className="py-4 px-6 text-center">
+                {user.fileLinks.length > 0 && (
+                  <button
+                    onClick={() => openModal(user)}
+                    className="text-blue-600 hover:text-blue-800 font-medium flex justify-center items-center gap-1"
+                  >
+                    <FaEye /> View Files
+                  </button>
+                )}
+              </td>
+              <td className="py-4 px-6 text-center">
+                {user.status === "Approved" ? (
+                  <span className="text-green-600 flex items-center justify-center gap-1">
+                    <FaCheckCircle /> Approved
+                  </span>
+                ) : (
+                  <span className="text-yellow-500 flex items-center justify-center gap-1">
+                    <FaTimesCircle /> Pending
+                  </span>
+                )}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+
+    {/* Pagination Controls */}
+    <div className="flex justify-between items-center mt-6 px-4">
+      <button
+        onClick={prevPage}
+        disabled={currentPage === 1}
+        className={`px-5 py-2 rounded-xl font-semibold text-white transition ${
+          currentPage === 1
+            ? "bg-gray-400 cursor-not-allowed"
+            : "bg-blue-500 hover:bg-blue-600"
+        }`}
+      >
+        Previous
+      </button>
+      <span className="text-gray-600 text-lg font-medium">
+        Page {currentPage} of {Math.ceil(users.length / usersPerPage)}
+      </span>
+      <button
+        onClick={nextPage}
+        disabled={currentPage === Math.ceil(users.length / usersPerPage)}
+        className={`px-5 py-2 rounded-xl font-semibold text-white transition ${
+          currentPage === Math.ceil(users.length / usersPerPage)
+            ? "bg-gray-400 cursor-not-allowed"
+            : "bg-blue-500 hover:bg-blue-600"
+        }`}
+      >
+        Next
+      </button>
+    </div>
+  </div>
+
+  {/* Modal */}
+  {showModal && (
+    <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center px-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[80vh] overflow-y-auto p-8">
+        <h3 className="text-2xl font-bold text-gray-800 mb-6 text-center">File Previews</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+          {selectedFiles.map((file, index) => (
+            <div key={index} className="flex flex-col items-center bg-gray-50 p-4 rounded-lg shadow">
+              <a href={file.url} target="_blank" rel="noopener noreferrer">
+                <img
+                  src={file.url}
+                  alt={`File ${index + 1}`}
+                  className="w-32 h-32 object-cover rounded-md shadow-md hover:scale-105 transition-transform"
+                  onError={(e) => {
+                    e.currentTarget.src = "/decentralizedDb/file-placeholder.png";
+                  }}
+                />
+              </a>
+              <p className="mt-3 text-sm font-medium text-gray-700">File {index + 1}</p>
+              {!file.approved ? (
+                <button
+                  onClick={() => approve(selectedUser!, file.index)}
+                  className="mt-2 px-4 py-1 bg-green-500 text-white rounded-lg hover:bg-green-600 flex items-center gap-1"
+                >
+                  <FaCheckCircle /> Approve
+                </button>
+              ) : (
+                <span className="mt-2 text-green-600 flex items-center gap-1">
+                  <FaCheckCircle /> Approved
+                </span>
+              )}
+            </div>
+          ))}
         </div>
-
-        <div className="flex justify-between items-center mt-4">
+        <div className="text-center mt-6">
           <button
-            onClick={prevPage}
-            disabled={currentPage === 1}
-            className={`px-4 py-2 rounded-lg text-white ${currentPage === 1 ? "bg-gray-400 cursor-not-allowed" : "bg-blue-500 hover:bg-blue-600"}`}
+            onClick={() => setShowModal(false)}
+            className="px-6 py-2 bg-red-500 text-white rounded-xl hover:bg-red-600 font-semibold"
           >
-            Previous
-          </button>
-          <span className="text-gray-700">
-            Page {currentPage} of {Math.ceil(users.length / usersPerPage)}
-          </span>
-          <button
-            onClick={nextPage}
-            disabled={currentPage === Math.ceil(users.length / usersPerPage)}
-            className={`px-4 py-2 rounded-lg text-white ${currentPage === Math.ceil(users.length / usersPerPage) ? "bg-gray-400 cursor-not-allowed" : "bg-blue-500 hover:bg-blue-600"}`}
-          >
-            Next
+            Close
           </button>
         </div>
       </div>
-
-       {showModal && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
-          <div className="bg-white p-6 rounded-lg shadow-xl w-1/2 max-h-[80vh] overflow-auto">
-            <h3 className="text-xl font-semibold mb-4">File Previews</h3>
-            <div className="grid grid-cols-3 gap-4">
-              {selectedFiles.map((file, index) => (
-                <div key={index} className="flex flex-col items-center">
-                  <a href={file.url} target="_blank" rel="noopener noreferrer">
-                    <img
-                      src={file.url}
-                      alt={`File ${index + 1}`}
-                      className="w-32 h-32 object-cover rounded-md shadow-md cursor-pointer"
-                      onError={(e) => {
-                        e.currentTarget.src = "/decentralizedDb/file-placeholder.png";
-                      }}
-                    />
-                  </a>
-                  <p className="mt-2 text-sm text-gray-600">File {index + 1}</p>
-                  {!file.approved ? (
-                    <button
-                      onClick={() => approve(selectedUser!, file.index)}
-                      className="mt-2 px-3 py-1 bg-green-500 text-white rounded-lg hover:bg-green-600 flex items-center"
-                    >
-                      <FaCheckCircle className="mr-1" /> Approve
-                    </button>
-                  ) : (
-                    <span className="mt-2 text-green-600 flex items-center">
-                      <FaCheckCircle className="mr-1" /> Approved
-                    </span>
-                  )}
-                </div>
-              ))}
-            </div>
-            <button
-              onClick={() => setShowModal(false)}
-              className="mt-6 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      )}
     </div>
+  )}
+</div>
+
   );
 }

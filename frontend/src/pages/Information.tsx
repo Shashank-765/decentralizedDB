@@ -3,6 +3,7 @@ import ToastMessage from "./toastmessage";
 import { create } from "ipfs-http-client";
 import config from '../../config.json';
 import axios from "axios";
+import CryptoJS from "crypto-js";
 
 interface Field {
   key: string;
@@ -12,6 +13,7 @@ interface Field {
 const CustomForm: React.FC = () => {
   const [fields, setFields] = useState<Field[]>([{ key: "", value: "" }]);
   const [errors, setErrors] = useState<{ [index: number]: boolean }>({});
+  const SECRET_KEY = "your-strong-secret-key";
   const ipfs = create({
     url: config.URL_IPFS,
   });
@@ -57,66 +59,35 @@ const CustomForm: React.FC = () => {
       ToastMessage("Please fill all fields before submitting.", "error", "");
       return;
     }
+  
     try {
-      const dataJson = JSON.stringify(validFields, null, 2);
-      const dataBlob = new Blob([dataJson], { type: "application/json" });
+      const plainJson = JSON.stringify(validFields);
+      const encryptedBase64 = CryptoJS.AES.encrypt(plainJson, SECRET_KEY).toString();
+  
+      const encryptedBlob = new Blob([encryptedBase64], { type: "text/plain" });
+  
       const fileToUpload = {
         path: "InformationForm.json",
-        content: dataBlob,
+        content: encryptedBlob,
       };
   
-      let folderCid = "";  
+      let folderCid = "";
       for await (const file of ipfs.addAll([fileToUpload], { wrapWithDirectory: true })) {
         folderCid = file.cid.toString();
-      } 
-      const response = await axios.post(`${config.URL_BACKEND}api/auth/saveCID`, {
+      }
+  
+      await axios.post(`${config.URL_BACKEND}api/auth/saveCID`, {
         userId: JSON.parse(localStorage.getItem("user") || "{}").userId,
         cid: folderCid,
       });
-      console.log(response.data);
-      console.log("Submitted Fields uploaded to IPFS:", folderCid); 
-      ToastMessage("Information Form submitted and uploaded to IPFS!", "success", "");  
+  
+      ToastMessage("Form encrypted and uploaded!", "success", "");
       setFields([{ key: "", value: "" }]);
-      setErrors({});
-    } catch (error) {
-      console.error("IPFS Upload Error:", error);
-      ToastMessage("Failed to upload form data to IPFS.", "error", "");
+    } catch (err) {
+      console.error("Upload error:", err);
+      ToastMessage("Upload failed", "error", "");
     }
   };
-  
-
-
-  // const handleSubmit = () => {
-  //   let hasErrors = false;
-  //   const newErrors: { [index: number]: boolean } = {};
-
-  //   fields.forEach((f, i) => {
-  //     if (f.key.trim() === "" || f.value.trim() === "") {
-  //       newErrors[i] = true;
-  //       hasErrors = true;
-  //       ToastMessage("Please fill the field.", "error", "")
-  //       return;
-  //     }
-  //   });
-
-  //   setErrors(newErrors);
-
-  //   const validFields = fields.filter(
-  //     (f) => f.key.trim() !== "" && f.value.trim() !== ""
-  //   );
-
-  //   if (validFields.length === 0) {
-  //     // ToastMessage("Please fill the field.", "error", "")
-  //     return;
-  //   }
-
-  //   if (hasErrors) return;
-
-  //   console.log("Submitted Fields:", validFields);
-  //   setFields([{ key: "", value: "" }]);
-  //   setErrors({});
-  //   ToastMessage("Information Form submitted successfully!", "success", "")
-  // };
 
   return (
     <div className="min-h-screen bg-white py-16 px-4">
@@ -132,7 +103,6 @@ const CustomForm: React.FC = () => {
             className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-6 items-start"
           >
             <div>
-              {/* <label className="block text-sm text-gray-600 mb-1">Field Name</label> */}
               <input
                 type="text"
                 placeholder="Enter Field Name"
@@ -149,7 +119,6 @@ const CustomForm: React.FC = () => {
             </div>
   
             <div>
-              {/* <label className="block text-sm text-gray-600 mb-1">Field Value</label> */}
               <input
                 type="text"
                 placeholder="Enter Field Value"

@@ -6,9 +6,13 @@ import './footer.css'
 import { Link } from "react-router-dom";
 import axios from "axios";
 const provider = new ethers.providers.JsonRpcProvider(config.URL_RPC);
+import CryptoJS from "crypto-js";
+import editimage from '../assets/edit.png'
+
 
 export default function UserProfile() {
   const navigate = useNavigate();
+  const SECRET_KEY = "your-strong-secret-key";
   const [files, setFiles] = useState<string[]>([]);
   interface IpfsFile {
     cid: string;
@@ -19,7 +23,6 @@ export default function UserProfile() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Fetch user data from local storage
     const storedUser = localStorage.getItem("user");
     if (storedUser) {
       const parsedUser = JSON.parse(storedUser);
@@ -32,12 +35,11 @@ export default function UserProfile() {
     fetcuserdatafrombackend();
   }, []);
 
-  // Separate effect to fetch documents only when user.walletAddress is available
   useEffect(() => {
     if (user?.walletAddress) {
       fetchUserDocuments(user?.walletAddress);
     }
-  }, [user?.walletAddress]); // Runs only when walletAddress is updated
+  }, [user?.walletAddress]); 
 
   const fetcuserdatafrombackend = async () => {
     try {
@@ -62,39 +64,55 @@ export default function UserProfile() {
   };
   const fetchContentFromIpfs = async (cid: string, filename = "InformationForm.json") => {
     const gateways = [
+      `http://127.0.0.1:8080/ipfs/${cid}/${filename}`,
       `http://143.110.176.177:8080/ipfs/${cid}/${filename}`,
-      // `https://ipfs.io/ipfs/${cid}/${filename}`,
-      // `https://dweb.link/ipfs/${cid}/${filename}`,
     ];
   
     for (const url of gateways) {
       try {
-        const res = await fetch(url, { cache: "no-store", mode: "cors" });
+        const res = await fetch(url, {
+          method: "GET",
+          mode: "cors",
+          cache: "no-store",
+        });
   
-        if (!res.ok) continue;
-  
-        const contentType = res.headers.get("content-type");
-        if (contentType?.includes("application/json")) {
-          return await res.json();
-        } else {
-          return await res.text();
+        if (!res.ok) {
+          console.warn(`Gateway responded with status ${res.status} at ${url}`);
+          continue;
         }
+  
+        const encryptedText = await res.text();
+        const decryptedBytes = CryptoJS.AES.decrypt(encryptedText, SECRET_KEY);
+        const decryptedText = decryptedBytes.toString(CryptoJS.enc.Utf8);
+  
+        if (!decryptedText) {
+          console.warn("Failed to decrypt data from IPFS.");
+          continue;
+        }
+  
+        try {
+          const json = JSON.parse(decryptedText);
+          console.log(" Decrypted & parsed JSON from IPFS:", json);
+          return json;
+        } catch (jsonError) {
+          console.log(" Decrypted plain text from IPFS:", decryptedText);
+          return decryptedText;
+        }
+  
       } catch (err) {
-        console.warn(`Failed to fetch from ${url}`, err);
+        console.warn(` Error fetching from ${url}:`, err);
       }
     }
   
-    console.error("All IPFS gateways failed for CID:", cid);
+    console.error(" All IPFS gateways failed or decryption failed for CID:", cid);
     return null;
   };
   useEffect(() => {
     const loadIpfsContents = async () => {
-      console.log(informationFile,'informationFile')
       const allContents = await Promise.all(
         informationFile.map((file) => fetchContentFromIpfs(file.cid, "InformationForm.json"))
       );
       setIpfsContents(allContents);
-      console.log(allContents,'allContents')
     };
   
     if (informationFile?.length > 0 && informationFile[0].cid) {
@@ -104,12 +122,14 @@ export default function UserProfile() {
 
   return (
     <div className="bg-gray-200 min-h-screen flex flex-col items-center p-10">
-      {/* User Profile Card */}
-      {/* Desktop Menu */}
-          <ul className={`hidden md:flex space-x-6 editbuttons`}>
-            <li><Link to="/edit" className="text-gray-700 hover:text-gray-800 text-lg w-32 h-12 flex items-center justify-center rounded-full bg-white shadow-md hover:shadow-lg transition ">edit</Link></li></ul>
+          <ul className={`hidden md:flex mb-5 space-x-6 editbuttons`}>
+            <li>
+              {/* <Link to="/edit" className="text-gray-700 hover:text-gray-800 text-lg w-32 h-12 flex items-center justify-center rounded-full bg-white shadow-md hover:shadow-lg transition "><img src={editimage} alt="edit" className="w-5 h-5" /></Link> */}
+              <Link to="/edit" className=""><img src={editimage} title="edit profile" alt="edit" className="w-5 h-5" /></Link>
+              
+              </li></ul>
       {user && (
-        <div className="relative bg-white p-8 rounded-3xl shadow-2xl flex flex-col items-center w-full max-w-lg mb-8 transform transition hover:scale-105">
+        <div className="relative bg-white p-8 rounded-3xl shadow-2xl flex flex-col items-center w-full sm:w-[600px] md:w-[750px] lg:w-[950px] xl:w-[1050px] max-w-full sm:max-w-[600px] md:max-w-[750px] lg:max-w-[1050px] xl:max-w-[1050px] mb-8 transform transition">
           <div className="w-32 h-32 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center shadow-lg">
             <span className="text-4xl text-white font-bold">{user.name.charAt(0)}{user.name.charAt(1)}{user.name.charAt(2)}</span>
           </div>
@@ -121,7 +141,6 @@ export default function UserProfile() {
         </div>
       )}
 
-      {/* Documents Grid */}
       <div className="w-full max-w-5xl">
   {loading ? (
     <p className="text-gray-600 text-center">Loading documents...</p>
@@ -129,7 +148,7 @@ export default function UserProfile() {
     <p className="text-gray-500 text-center">No verified documents found.</p>
   ) : (
     <>
-      {/* Show FILES section first if available */}
+      <h1 className="text-2xl font-bold text-gray-800 text-center mt-8 mb-8">{files.length > 0 ? "User Uploaded Files" : ""}</h1>
       {files.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
           {files.map((file, index) => (
@@ -158,8 +177,9 @@ export default function UserProfile() {
         </div>
       )}
 
-      {/* Show INFORMATION FILE section if available */}
       {informationFile.length > 0 && ipfsContents.length > 0 && (
+       <>      
+       <h1 className="text-2xl font-bold text-gray-800 text-center mt-8 mb-8">User Information Files</h1>
        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
        {ipfsContents.map((content, index) => (
          <div
@@ -188,18 +208,19 @@ export default function UserProfile() {
            </div>
      
            <div className="mt-6">
-             <a
+             {/* <a
                href={`http://127.0.0.1:5001/ipfs/bafybeid26vjplsejg7t3nrh7mxmiaaxriebbm4xxrxxdunlk7o337m5sqq/#/ipfs/${informationFile[index].cid}/InformationForm.json`}
                target="_blank"
                rel="noopener noreferrer"
                className="inline-block text-center w-full bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-semibold py-2 px-4 transition cursor-pointer"
              >
                View IPFS File
-             </a>
+             </a> */}
            </div>
          </div>
        ))}
      </div>
+       </>
      
       )}
     </>
