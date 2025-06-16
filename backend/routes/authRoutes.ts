@@ -40,7 +40,6 @@ router.get("/facebook", passport.authenticate("facebook", {
    scope: ["email"] 
    }));
 
-
 router.get("/facebook/callback", passport.authenticate("facebook", {
     failureRedirect: "/",
   }),
@@ -56,6 +55,7 @@ router.get("/user", (req, res) => {
     res.status(401).json({ success: false, message: "Not logged in" });
   }
 });
+
 router.get("/logout", (req, res) => {
   req.logout(err => {
     if (err) {

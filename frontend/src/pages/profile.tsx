@@ -30,6 +30,18 @@ export default function UserProfile() {
   const popupRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    if (editOpen) {
+      document.body.style.overflow = "hidden"; 
+    } else {
+      document.body.style.overflow = "auto"; 
+    }  
+    return () => {
+      document.body.style.overflow = "auto"; 
+    };
+  }, [editOpen]);
+  
+
+  useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (popupRef.current && !popupRef.current.contains(event.target as Node)) {
         setEditOpen(false);
