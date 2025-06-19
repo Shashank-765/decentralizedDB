@@ -444,13 +444,21 @@ cursor: pointer;
 .walletaddressed{
 overflow: hidden;
 text-overflow: ellipsis;
-width: 100%;
+width: 50%;
+}
+@media screen and (max-width: 960px) {
+   .walletaddressed{
+    width: 70%;
+   }
 }
 @media screen and (max-width: 766px) {
     .editbuttons{
         display: block !important;
         margin-bottom: 10px;
         align-self: center;
+    }
+    .walletaddressed{
+      width: 100%;
     }
   
 }

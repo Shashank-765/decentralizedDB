@@ -1,4 +1,4 @@
-import { useState, useEffect,useRef  } from "react";
+import { useState, useEffect, useRef } from "react";
 import { ethers } from "ethers";
 import { useNavigate } from "react-router-dom";
 import config from "../../config.json";
@@ -16,7 +16,6 @@ export default function UserProfile() {
   const [ipfsContents, setIpfsContents] = useState<any[]>([]);
   const [user, setUser] = useState<{ name: string; email: string; walletAddress: string } | null>(null);
   const [loading, setLoading] = useState(true);
-
   const [editOpen, setEditOpen] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
@@ -31,15 +30,15 @@ export default function UserProfile() {
 
   useEffect(() => {
     if (editOpen) {
-      document.body.style.overflow = "hidden"; 
+      document.body.style.overflow = "hidden";
     } else {
-      document.body.style.overflow = "auto"; 
-    }  
+      document.body.style.overflow = "auto";
+    }
     return () => {
-      document.body.style.overflow = "auto"; 
+      document.body.style.overflow = "auto";
     };
   }, [editOpen]);
-  
+
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -47,11 +46,11 @@ export default function UserProfile() {
         setEditOpen(false);
       }
     };
-  
+
     if (editOpen) {
       document.addEventListener("mousedown", handleClickOutside);
     }
-  
+
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
@@ -133,48 +132,60 @@ export default function UserProfile() {
     }
   }, [user?.walletAddress]);
 
-  useEffect(() => {
-    const loadIpfsContents = async () => {
-      const allContents = await Promise.all(
-        informationFile.map((file) => fetchContentFromIpfs(file.cid, "InformationForm.json"))
-      );
-      setIpfsContents(allContents);
-    };
-
-    if (informationFile?.length > 0 && informationFile[0].cid) {
-      loadIpfsContents();
-    }
-  }, [informationFile]);
-
   const fetchContentFromIpfs = async (cid: string, filename = "InformationForm.json") => {
     const gateways = [
       `http://127.0.0.1:8080/ipfs/${cid}/${filename}`,
       `http://143.110.176.177:8080/ipfs/${cid}/${filename}`,
     ];
+
     for (const url of gateways) {
       try {
         const res = await fetch(url);
         if (!res.ok) continue;
+
         const encryptedText = await res.text();
         const decryptedBytes = CryptoJS.AES.decrypt(encryptedText, SECRET_KEY);
         const decryptedText = decryptedBytes.toString(CryptoJS.enc.Utf8);
+
         return JSON.parse(decryptedText);
-      } catch {}
+      } catch {
+
+      }
     }
     return null;
   };
 
+  useEffect(() => {
+    const fetchFiles = async () => {
+      setLoading(true);
+
+      const filtered = files.filter((f) => f.endsWith("/files"));
+
+      const results = await Promise.all(
+        filtered.map(async (cidPath) => {
+          const cidOnly = cidPath.replace("/files", "");
+          return await fetchContentFromIpfs(cidOnly);
+        })
+      );
+
+      setIpfsContents(results.filter(Boolean));
+      setLoading(false);
+    };
+
+    fetchFiles();
+  }, [files]);
+
   return (
     <div className="bg-gray-200 min-h-screen flex flex-col items-center p-10">
-     <div className="w-full flex justify-end mb-5">
-  <button className="cursor-pointer hover:opacity-80" onClick={() => setEditOpen(true)}>
-    <img src={editimage} alt="Edit" className="w-5 h-5" />
-  </button>
-</div>
+      <div className="w-full flex justify-end mb-5">
+        <button className="cursor-pointer hover:opacity-80" onClick={() => setEditOpen(true)}>
+          <img src={editimage} alt="Edit" className="w-5 h-5" />
+        </button>
+      </div>
 
 
       {user && (
-        <div className="relative bg-white p-8 rounded-3xl shadow-2xl flex flex-col items-center w-full max-w-3xl mb-8">
+        <div className="relative bg-white p-8 rounded-3xl shadow-2xl flex flex-col items-center w-full max-w-7xl mb-8">
           <div className="w-32 h-32 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center shadow-lg">
             <span className="text-4xl text-white font-bold">{user.name.slice(0, 3)}</span>
           </div>
@@ -186,7 +197,7 @@ export default function UserProfile() {
         </div>
       )}
 
-      <div className="w-full max-w-5xl">
+      <div className="w-full max-w-7xl">
         {loading ? (
           <p className="text-gray-600 text-center">Loading documents...</p>
         ) : files.length === 0 && informationFile.length === 0 ? (
@@ -195,40 +206,57 @@ export default function UserProfile() {
           <>
             {files.length > 0 && (
               <>
-                <h1 className="text-2xl font-bold text-gray-800 text-center mt-8 mb-8">User Uploaded Files</h1>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-                  {files.map((file, index) => (
-                    <div key={index} className="bg-white p-6 rounded-xl shadow-xl flex flex-col items-center hover:scale-105 transition">
-                      <img
-                        src={`https://ipfs.io/ipfs/${file}`}
-                        alt={`Document ${index + 1}`}
-                        className="w-40 h-40 object-cover rounded-lg shadow-md"
-                        onError={(e) => (e.currentTarget.src = "/decentralizedDb/file-placeholder.png")}
-                      />
-                      <a
-                        onClick={() => navigate("/viewDocuments", { state: { file } })}
-                        className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition cursor-pointer"
+                <h1 className="text-2xl font-bold text-gray-800 font-bold text-center mt-8 mb-8 text-uppercase">USER UPLOADED FILES</h1>
+                <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                  {files
+                    .filter((file) => !file.endsWith("/files"))
+                    .map((file, index) => (
+                      <div
+                        key={index}
+                        className="bg-white p-6 rounded-xl shadow-xl flex flex-col items-center hover:scale-105 transition"
                       >
-                        View Document
-                      </a>
-                    </div>
-                  ))}
+                        <img
+                          src={`https://ipfs.io/ipfs/${file}`}
+                          alt={`Document ${index + 1}`}
+                          className="w-40 h-40 object-cover rounded-lg shadow-md"
+                          onError={(e) =>
+                            (e.currentTarget.src = "/decentralizedDb/file-placeholder.png")
+                          }
+                        />
+                        <a
+                          onClick={() => navigate("/viewDocuments", { state: { file } })}
+                          className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition cursor-pointer"
+                        >
+                          View Document
+                        </a>
+                      </div>
+                    ))}
+
                 </div>
               </>
             )}
 
             {informationFile.length > 0 && ipfsContents.length > 0 && (
               <>
-                <h1 className="text-2xl font-bold text-gray-800 text-center mt-8 mb-8">User Information Files</h1>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                <h1 className="text-2xl font-bold text-gray-800 font-bold text-center mt-8 mb-8 text-uppercase">USER INFORMATION FILES</h1>
+                <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
                   {ipfsContents.map((content, index) => (
-                    <div key={index} className="bg-white border border-gray-200 rounded-2xl shadow-lg hover:shadow-xl p-6">
-                      <h2 className="text-xl font-semibold text-indigo-600 mb-4">Document #{index + 1}</h2>
+                    <div
+                      key={index}
+                      className="bg-white border border-gray-200 rounded-2xl shadow-lg hover:shadow-xl p-6"
+                    >
+                      <h2 className="text-xl font-semibold text-indigo-600 mb-4">
+                        Document #{index + 1}
+                      </h2>
+
                       {Array.isArray(content) ? (
                         <div className="space-y-3">
                           {content.map((field, idx) => (
                             <div key={idx} className="text-sm text-gray-700">
-                              <span className="font-medium text-gray-900 capitalize">{field.key}:</span> <span>{field.value}</span>
+                              <span className="font-medium text-gray-900 capitalize">
+                                {field.key}:
+                              </span>{" "}
+                              <span>{field.value}</span>
                             </div>
                           ))}
                         </div>
@@ -245,7 +273,7 @@ export default function UserProfile() {
       </div>
 
       {editOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50">
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50">
           <div ref={popupRef} className="bg-white p-6 rounded-xl w-full max-w-xl shadow-xl relative">
             <h2 className="text-xl font-bold mb-4">Edit Profile</h2>
             <form onSubmit={handleEditSubmit} className="space-y-4">
