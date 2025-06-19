@@ -12,7 +12,6 @@ export default function UserProfile() {
   const navigate = useNavigate();
   const SECRET_KEY = "your-strong-secret-key";
   const [files, setFiles] = useState<string[]>([]);
-  const [informationFile, setInformationFile] = useState<{ cid: string }[]>([]);
   const [ipfsContents, setIpfsContents] = useState<any[]>([]);
   const [user, setUser] = useState<{ name: string; email: string; walletAddress: string } | null>(null);
   const [loading, setLoading] = useState(true);
@@ -119,10 +118,6 @@ export default function UserProfile() {
         });
       });
     }
-
-    axios
-      .get(`${config.URL_BACKEND}api/auth/getuserfilebycid?userId=${JSON.parse(localStorage.getItem("user") || "{}")?.userId}`)
-      .then((res) => setInformationFile(res.data.user));
   }, []);
 
   useEffect(() => {
@@ -200,7 +195,7 @@ export default function UserProfile() {
       <div className="w-full max-w-7xl">
         {loading ? (
           <p className="text-gray-600 text-center">Loading documents...</p>
-        ) : files.length === 0 && informationFile.length === 0 ? (
+        ) : files.length === 0 ? (
           <p className="text-gray-500 text-center">No verified documents found.</p>
         ) : (
           <>
@@ -236,7 +231,7 @@ export default function UserProfile() {
               </>
             )}
 
-            {informationFile.length > 0 && ipfsContents.length > 0 && (
+            {ipfsContents.length > 0 && (
               <>
                 <h1 className="text-2xl font-bold text-gray-800 font-bold text-center mt-8 mb-8 text-uppercase">USER INFORMATION FILES</h1>
                 <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">

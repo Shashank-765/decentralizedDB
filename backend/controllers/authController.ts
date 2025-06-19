@@ -74,27 +74,6 @@ export const login = async (req: Request, res: Response) => {
         res.status(400).json({ error: error.message });
     }
 };
-export const saveCID = async (req: Request, res: Response) => {
-    try {
-        const { userId, cid } = req.body;
-        if(!userId || !cid){
-            return res.status(400).json({ error: "User ID and CID are required" });
-        }
-        const user = await authService.saveCID(userId, cid);
-        res.status(200).json({ message: "CID saved successfully", user });
-    } catch (error: any) {
-        res.status(400).json({ error: error.message });
-    }
-}
-export const getuserfilebycid = async (req: Request, res: Response) => {
-    try {
-        const { userId } = req.query;
-        const user = await authService.getuserfilebycid(userId as string);
-        res.status(200).json({ message: "User Fetched successful", user });
-    } catch (error: any) {
-        res.status(400).json({ error: error.message });
-    }
-}
 export const userList = async (req: Request, res: Response) => {
     try {
         const user = await authService.userList();

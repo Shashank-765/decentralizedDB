@@ -3,7 +3,6 @@ import ToastMessage from "./toastmessage";
 import { create } from "ipfs-http-client";
 import config from '../../config.json';
 import { ethers } from "ethers";
-import axios from "axios";
 import CryptoJS from "crypto-js";
 
 interface Field {
@@ -56,9 +55,6 @@ const CustomForm: React.FC = () => {
       console.log(error)
     }
   }
-  const user = JSON.parse(localStorage.getItem("user") || "{}");
-  const contract = new ethers.Contract(config.contractAddress, config.abi, provider);
-  contract.viewDocuments(user.walletAddress).then((res: any) => console.log(res, 'viewDocuments')).catch((err: any) => console.log(err))
 
   const handleSubmit = async () => {
     let hasErrors = false;
@@ -98,11 +94,6 @@ const CustomForm: React.FC = () => {
       for await (const file of ipfs.addAll([fileToUpload], { wrapWithDirectory: true })) {
         folderCid = file.cid.toString();
       }
-
-      await axios.post(`${config.URL_BACKEND}api/auth/saveCID`, {
-        userId: JSON.parse(localStorage.getItem("user") || "{}").userId,
-        cid: folderCid,
-      });
       folderCid = folderCid + '/files';
       await uploadFileDocument(folderCid);
       ToastMessage("Form encrypted and uploaded!", "success", "");
