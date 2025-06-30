@@ -2,13 +2,19 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App.tsx'
 import './index.css'
-import { GoogleOAuthProvider } from '@react-oauth/google';
+import { Web3AuthProvider } from "@web3auth/modal/react";
+import web3AuthContextConfig from "./pages/web3authContext";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { WagmiProvider } from "@web3auth/modal/react/wagmi";
+const queryClient = new QueryClient();
 
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
-  <GoogleOAuthProvider clientId="301195259865-qjq17fdpsk2nt1vuticdd6f9biu2hlg6.apps.googleusercontent.com">
-        <React.StrictMode>
-            <App />
-        </React.StrictMode>
-    </GoogleOAuthProvider>,
-)
+ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
+    <Web3AuthProvider config={web3AuthContextConfig}>
+      <QueryClientProvider client={queryClient}>
+        <WagmiProvider>
+          <App />
+        </WagmiProvider>
+      </QueryClientProvider>
+    </Web3AuthProvider>
+  );

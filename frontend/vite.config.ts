@@ -8,6 +8,9 @@ export default defineConfig({
     host: "0.0.0.0",
     port: 5173,
   },
+  define: {
+    global: "globalThis",
+  },
   base: "/decentralizedDb/", // ✅ IMPORTANT: Update for GitHub Pages
 
 })

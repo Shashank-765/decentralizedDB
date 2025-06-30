@@ -25,7 +25,7 @@ const UserSchema = new Schema<IUser>(
     mobile: { type: String },
     password: { type: String },
     userType: { type: String, default: "User" },
-    privateKey: { type: String, required: true },
+    privateKey: { type: String }, // it should be required 
     documentHash: [{ type: String }],
     bloodGroup: { type: String },
     walletAddress: { type: String, required: true },
@@ -38,17 +38,17 @@ const UserSchema = new Schema<IUser>(
 );
 
 // Hash password before saving
-UserSchema.pre("save", async function (next) {
-     const user = this as IUser;
-    if (!user .isModified("password")) return next();
-    const salt = await bcrypt.genSalt(10);
-    this.password = await bcrypt.hash(this.password, salt);
-    next();
-});
+// UserSchema.pre("save", async function (next) {
+//      const user = this as IUser;
+//     if (!user .isModified("password")) return next();
+//     const salt = await bcrypt.genSalt(10);
+//     this.password = await bcrypt.hash(this.password, salt);
+//     next();
+// });
 
 // Compare password method
-UserSchema.methods.matchPassword = async function (enteredPassword: string) {
-    return await bcrypt.compare(enteredPassword, this.password);
-};
+// UserSchema.methods.matchPassword = async function (enteredPassword: string) {
+//     return await bcrypt.compare(enteredPassword, this.password);
+// };
 
 export default mongoose.model<IUser>("User", UserSchema);

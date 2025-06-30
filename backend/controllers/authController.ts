@@ -29,8 +29,8 @@ export const getuserdata = async (req: Request, res: Response)  => {
 };
 export const verifyUserPassword = async (req: Request, res: Response) => {  
     try {
-        const { email, password } = req.body;
-        const user = await authService.loginUser(email, password);
+        const { email, password, name } = req.body;
+        const user = await authService.loginUser(email, password,name);
         res.status(200).json({ message: "Password verified successfully", user });
     } catch (error: any) {
         res.status(400).json({ error: error.message });
@@ -67,8 +67,9 @@ export const verifyOtp = async (req: Request, res: Response) => {
 }
 export const login = async (req: Request, res: Response) => {
     try {
-        const { email, password } = req.body;
-        const user = await authService.loginUser(email, password);
+        const { walletAddress, email , name} = req.body;
+        console.log(walletAddress,email,name,'walletAddress,email,name')
+        const user = await authService.loginUser(email, walletAddress, name);
         res.status(200).json({ message: "Login successful", user });
     } catch (error: any) {
         res.status(400).json({ error: error.message });

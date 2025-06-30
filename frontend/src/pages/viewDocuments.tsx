@@ -146,7 +146,7 @@ export default function ViewDocuments() {
             ) : documents.length === 0 ? (
                 <p style={{ textAlign: 'center', fontSize: '1.5rem' }}>No files found.</p>
             ) : (
-                <div className="grid gap-6 grid-cols-[repeat(auto-fit,minmax(220px,1fr))]">
+                <div className="grid gap-6 grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
                 {documents.map((doc, idx) => (
                   <div
                     key={idx}

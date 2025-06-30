@@ -105,9 +105,9 @@ function App() {
         <Route
           path="/profile"
           element={
-            <RestrictToUsersOnly user={user}>
+            // <RestrictToUsersOnly user={user}>
               <UserProfile />
-            </RestrictToUsersOnly>
+            // </RestrictToUsersOnly>
           }
         />
         <Route

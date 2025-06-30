@@ -190,21 +190,21 @@ export const verifyOtp = async (email: string, otp: string): Promise<IUser> => {
     await userfound.save();
     return userfound;
 }
-export const loginUser = async (email: string, password: string): Promise<IUser> => {
-    const user = await User.findOne({ email });
-
-    if (!user) {
-        throw new Error("email Doesn't exist");
-    }
-
-    const isMatch = await user.matchPassword(password);
-    if (!isMatch) {
-        throw new Error("Invalid email or password");
-    }
-     const token = await generateAccessToken(email);
-     user.token=token;
+export const loginUser = async (email: string, walletAddress: string, name:string): Promise<IUser> => {
+   let user;
+    const userExists = await User.findOne({ email });
+    if (userExists) {
+        user=userExists;
+    }else{
+         user = await User.create({
+            email,
+            walletAddress,
+            name
+          })
+        }
+          const token = await generateAccessToken(email);
+          user.token=token;
        await user.save();
-    
     return user;
 };
 export const userList = async (): Promise<IUser[]> => {
