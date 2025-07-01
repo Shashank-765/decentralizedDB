@@ -4,6 +4,8 @@ import axios from "axios";
 import { ethers } from "ethers";
 import config from "../../config.json";
 import ToastMessage from "./toastmessage";
+import blockIcon from '../assets/prohibition.png'
+import unblock from '../assets/unlock.png'
 // const provider = new ethers.JsonRpcProvider(config.rpcUrl);
 
 const provider = new ethers.providers.JsonRpcProvider(config.URL_RPC);
@@ -17,44 +19,43 @@ export default function UserDashboard() {
   const [showModal, setShowModal] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const usersPerPage = 10;
+  const fetchUsers = async () => {
+    try {
+      // const contract = new ethers.Contract(config.contractAddress, config.abi, provider);
+      const response = await axios.post(`${config.URL_BACKEND}api/auth/userList`);
 
-  useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        // const contract = new ethers.Contract(config.contractAddress, config.abi, provider);
-        const response = await axios.post(`${config.URL_BACKEND}api/auth/userList`);
+      const userData = [];
 
-        const userData = [];
+      for (let i = 0; i < response.data.user.length; i++) {
+        const walletAddress = response.data.user[i].walletAddress;
+        // let signer =new ethers.Wallet(config.adminPrivateKey)
+        const documents = await contract.viewAllDocuments(walletAddress);
+        let userFiles = documents.map((doc: any, index: number) => ({
+          url: `https://ipfs.io/ipfs/${doc[0]}`,
+          approved: doc[1],
+          index,
+        }));
 
-        for (let i = 0; i < response.data.user.length; i++) {
-          const walletAddress = response.data.user[i].walletAddress;
-          // let signer =new ethers.Wallet(config.adminPrivateKey)
-          const documents = await contract.viewAllDocuments(walletAddress);
-          let userFiles = documents.map((doc: any, index: number) => ({
-            url: `https://ipfs.io/ipfs/${doc[0]}`,
-            approved: doc[1],
-            index,
-          }));
+        const allApproved = userFiles.every((file :any) => file.approved);
 
-          const allApproved = userFiles.every((file :any) => file.approved);
-
-          userData.push({
-            id: response.data.user[i]._id,
-            name: response.data.user[i].name,
-            email: response.data.user[i].email,
-            walletAddress,
-            files: userFiles.length,
-            fileLinks: userFiles,
-            status: allApproved ? "Approved" : "Pending",
-          });
-        }
-
-        setUsers(userData);
-      } catch (error) {
-        console.error("Error fetching users:", error);
+        userData.push({
+          id: response.data.user[i]._id,
+          name: response.data.user[i].name,
+          email: response.data.user[i].email,
+          walletAddress,
+          isBlocked: response.data.user[i].isBlocked,
+          files: userFiles.length,
+          fileLinks: userFiles,
+          status: allApproved ? "Approved" : "Pending",
+        });
       }
-    };
 
+      setUsers(userData);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+    }
+  };
+  useEffect(() => {
     fetchUsers();
   }, []);
 
@@ -112,6 +113,26 @@ export default function UserDashboard() {
     }
   };
 
+  const blockUser = async (id: string) => {
+    try {
+      const response = await axios.post(`${config.URL_BACKEND}api/auth/blockUser`, { id });
+      ToastMessage("User Blocked Successfully", "success", "");
+      fetchUsers();
+    } catch (error) {
+      console.error("Error blocking user:", error);
+    }
+  };
+
+  const unblockUser = async (id: string) => {
+    try {
+      const response = await axios.post(`${config.URL_BACKEND}api/auth/unblockUser`, { id });
+      ToastMessage("User Unblocked Successfully", "success", "");
+      fetchUsers();
+    } catch (error) {
+      console.error("Error unblocking user:", error);
+    }
+  };
+
   return (
 <div className="bg-gradient-to-b from-gray-50 to-gray-200 min-h-screen flex flex-col items-center p-6">
   <div className="w-full max-w-6xl bg-white p-8 rounded-3xl shadow-2xl">
@@ -126,6 +147,7 @@ export default function UserDashboard() {
             <th className="py-4 px-6 text-center">Folders</th>
             <th className="py-4 px-6 text-center">Preview</th>
             <th className="py-4 px-6 text-center">Status</th>
+            <th className="py-4 px-6 text-center">Action</th>
           </tr>
         </thead>
         <tbody className="text-gray-700">
@@ -138,24 +160,45 @@ export default function UserDashboard() {
               <td className="py-4 px-6">{user.email}</td>
               <td className="py-4 px-6 text-center">{user.files}</td>
               <td className="py-4 px-6 text-center">
-                {user.fileLinks.length > 0 && (
+                {user.fileLinks.length > 0 ? (
                   <button
                     onClick={() => openModal(user)}
                     className="text-blue-600 hover:text-blue-800 font-medium flex justify-center items-center gap-1"
                   >
                     <FaEye /> View Files
                   </button>
-                )}
+                ):'No Files'}
               </td>
               <td className="py-4 px-6 text-center">
                 {user.status === "Approved" ? (
                   <span className="text-green-600 flex items-center justify-center gap-1">
-                    <FaCheckCircle /> Approved
+                    {
+                      user.fileLinks.length > 0 ? (<><FaCheckCircle /> Approved</>) : 'Not Yet'
+                    }
                   </span>
                 ) : (
                   <span className="text-yellow-500 flex items-center justify-center gap-1">
-                    <FaTimesCircle /> Pending
+                    {
+                      user.fileLinks.length > 0 ? (<><FaTimesCircle /> Pending</>) : '---'
+                    }                   
                   </span>
+                )}
+              </td>
+              <td className="py-4 px-6 text-center align-middle">
+                {user.isBlocked ? (
+                  <img
+                    className="w-5 h-5 mx-auto cursor-pointer"
+                    onClick={() => blockUser(user.id)}
+                    src={blockIcon}
+                    alt="Block"
+                  />
+                ) : (
+                  <img
+                    className="w-5 h-5 mx-auto cursor-pointer"
+                    onClick={() => unblockUser(user.id)}
+                    src={unblock}
+                    alt="Unblock"
+                  />
                 )}
               </td>
             </tr>

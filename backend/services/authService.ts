@@ -61,7 +61,7 @@ export const updateUserPassword = async (email: string, newPassword: string): Pr
         throw new Error("User not found");
     }
 
-    user.password = newPassword;
+    // user.password = newPassword;
     await user.save();
 
     return user;
@@ -190,16 +190,21 @@ export const verifyOtp = async (email: string, otp: string): Promise<IUser> => {
     await userfound.save();
     return userfound;
 }
-export const loginUser = async (email: string, walletAddress: string, name:string): Promise<IUser> => {
+export const loginUser = async (email: string, walletAddress: string, name:string,profileImage:string): Promise<IUser> => {
    let user;
     const userExists = await User.findOne({ email });
     if (userExists) {
-        user=userExists;
+        if(userExists.isBlocked){
+            throw new Error("User is blocked");
+        }else{
+            user=userExists;
+        }
     }else{
          user = await User.create({
             email,
             walletAddress,
-            name
+            name,
+            profileImage
           })
         }
           const token = await generateAccessToken(email);
@@ -215,5 +220,25 @@ export const userList = async (): Promise<IUser[]> => {
     }
 
     return users;
+};
+
+export const blockUser = async (id: string): Promise<IUser> => {
+    const user = await User.findById(id);
+    if (!user) {
+        throw new Error("User not found");
+    }
+    user.isBlocked = false;
+    await user.save();
+    return user;
+};
+
+export const unblockUser = async (id: string): Promise<IUser> => {
+    const user = await User.findById(id);
+    if (!user) {
+        throw new Error("User not found");
+    }
+    user.isBlocked = true;
+    await user.save();
+    return user;
 };
 

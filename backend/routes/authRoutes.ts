@@ -4,7 +4,7 @@ import passport from "passport";
 import {
   register, login, userList, updateUser, getuserdata,
   verifyUserPassword, updatePassword,
-  otpverificationemailendpoint, verifyOtp
+  otpverificationemailendpoint, verifyOtp,blockUser,unblockUser
 } from "../controllers/authController";
 import { authorize } from "../Authorization/Auth";
 
@@ -19,6 +19,8 @@ router.post("/updatePassword", updatePassword);
 router.post("/verifyUserPassword", verifyUserPassword);
 router.post("/otpverifiucation", otpverificationemailendpoint);
 router.post("/verifiedotp", verifyOtp);
+router.post("/blockUser",blockUser);
+router.post("/unblockUser",unblockUser);
 
 router.get("/google",passport.authenticate("google", {
       scope: ["profile", "email"],

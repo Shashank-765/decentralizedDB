@@ -5,7 +5,7 @@ export interface IUser extends Document {
   name: string;
   email: string;
   mobile: string;
-  password: string;
+  profileImage: string;
   userType: string;
   privateKey: string;
   documentHash: string[];
@@ -13,6 +13,7 @@ export interface IUser extends Document {
   walletAddress: string;
   gender: "Male" | "Female";
   otp: string;
+  isBlocked: boolean;
   isotp_verified: boolean;
   token:string;
   matchPassword(enteredPassword: string): Promise<boolean>;
@@ -23,7 +24,7 @@ const UserSchema = new Schema<IUser>(
     name: { type: String},
     email: { type: String, required: true, unique: true },
     mobile: { type: String },
-    password: { type: String },
+    profileImage: { type: String },
     userType: { type: String, default: "User" },
     privateKey: { type: String }, // it should be required 
     documentHash: [{ type: String }],
@@ -32,6 +33,7 @@ const UserSchema = new Schema<IUser>(
     gender: { type: String, enum: ["Male", "Female"] },
     otp: { type: String, default: "" },
     isotp_verified: { type: Boolean, default: false },
+    isBlocked: { type: Boolean, default: false },
     token:{ type: String}
   },
   { timestamps: true }

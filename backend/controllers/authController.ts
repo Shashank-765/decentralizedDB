@@ -29,8 +29,8 @@ export const getuserdata = async (req: Request, res: Response)  => {
 };
 export const verifyUserPassword = async (req: Request, res: Response) => {  
     try {
-        const { email, password, name } = req.body;
-        const user = await authService.loginUser(email, password,name);
+        const { email, password, name,profileImage } = req.body;
+        const user = await authService.loginUser(email, password,name,profileImage);
         res.status(200).json({ message: "Password verified successfully", user });
     } catch (error: any) {
         res.status(400).json({ error: error.message });
@@ -67,9 +67,8 @@ export const verifyOtp = async (req: Request, res: Response) => {
 }
 export const login = async (req: Request, res: Response) => {
     try {
-        const { walletAddress, email , name} = req.body;
-        console.log(walletAddress,email,name,'walletAddress,email,name')
-        const user = await authService.loginUser(email, walletAddress, name);
+        const { walletAddress, email , name,profileImage} = req.body;
+        const user = await authService.loginUser(email, walletAddress, name,profileImage);
         res.status(200).json({ message: "Login successful", user });
     } catch (error: any) {
         res.status(400).json({ error: error.message });
@@ -83,3 +82,22 @@ export const userList = async (req: Request, res: Response) => {
         res.status(400).json({ error: error.message });
     }
 };
+export const blockUser = async (req: Request, res: Response) => {
+    try {
+        const { id } = req.body;
+        const user = await authService.blockUser(id);
+        res.status(200).json({ message: "User blocked successfully", user });
+    } catch (error: any) {
+        res.status(400).json({ error: error.message });
+    }
+};
+export const unblockUser = async (req: Request, res: Response) => {
+    try {
+        const { id } = req.body;
+        const user = await authService.unblockUser(id);
+        res.status(200).json({ message: "User unblocked successfully", user });
+    } catch (error: any) {
+        res.status(400).json({ error: error.message });
+    }
+};
+

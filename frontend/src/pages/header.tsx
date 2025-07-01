@@ -94,15 +94,27 @@ function Header() {
   useEffect(() => {
     if(isConnected && !isLogin && address && userInfo?.email){
       const loginUser = async () => {
-        const res = await axios.post(`${config.URL_BACKEND}api/auth/login`, {
-          walletAddress: address?.toString() || "",
-          email: userInfo?.email || '',
-          name:userInfo?.name || '',
-        });
-        if(res?.data?.user){
-          login(res.data.user);
-          setIsLogin(true)
+        try {
+          const res = await axios.post(`${config.URL_BACKEND}api/auth/login`, {
+            walletAddress: address?.toString() || "",
+            email: userInfo?.email || '',
+            name:userInfo?.name || '',
+            profileImage:userInfo?.profileImage || '',
+          });
+          if(res?.data?.user){
+            login(res.data.user);
+            setIsLogin(true)
+          }
+        } catch (error:any) {
+            if(error.response.data.error){
+              ToastMessage(error.response.data.error, "warning", "");
+              setTimeout(() => {
+                disconnect();
+              }, 1000);
+            }
+            return error.response.data.error;
         }
+        
         
       }
     if(!localUser && !isLogin){
@@ -269,7 +281,7 @@ function Header() {
                (
                 <>
 
-                    {!isConnected ? (
+                    {!isConnected && !user ? (
                       <button
                         onClick={() => connect()}
                         className="text-gray-700 hover:text-gray-800 text-lg w-32 h-12 flex items-center justify-center rounded-full bg-white shadow-md hover:shadow-lg transition"
@@ -283,7 +295,7 @@ function Header() {
                           className="flex items-center justify-center w-12 h-12 rounded-full bg-gray-200 hover:bg-gray-300 shadow"
                         >
                           <img
-                            src={userInfo?.profileImage}
+                            src={user?.profileImage}
                             alt="profile"
                             className="w-full h-full rounded-full"
                           />
@@ -388,7 +400,7 @@ function Header() {
                (
                 <>
 
-                    {!isConnected ? (
+                    {!isConnected && !user ? (
                       <button
                         onClick={() => connect()}
                         className="text-gray-700 hover:text-gray-800 text-lg w-32 h-12 flex items-center justify-center rounded-full bg-white shadow-md hover:shadow-lg transition"
@@ -396,7 +408,7 @@ function Header() {
                         {!isConnected && !isUIReady ? <CircularLoader size={30} /> : "Connect"}
                       </button>
                     ) : (
-                      <div className="relative inline-block text-left -mr-2">
+                      <div className="relative inline-block text-left">
                         {/* <button
                           onClick={toggleDropdown}
                           className="flex items-center justify-center w-12 h-12 rounded-full bg-gray-200 hover:bg-gray-300 shadow"
