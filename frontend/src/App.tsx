@@ -1,4 +1,4 @@
-import { HashRouter as Router, Routes, Route,useLocation  } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route,useLocation } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 
 import type { Book } from './types';
@@ -14,6 +14,7 @@ import config from "../config.json"
 import ProtectedRoute from './pages/protectedRoutes';
 import RestrictToUsersOnly from './pages/RestrictedUserRoutes';
 import ViewDocuments from './pages/viewDocuments';
+import SuperAdminDashboard from './pages/superAdminDashboard';
 import NotFound from './pages/notFound'
 
 function App() {
@@ -89,7 +90,15 @@ function App() {
   return (
     <Router>
       <ScrollToTop />
-      <ToastContainer />
+      <ToastContainer position="top-right"
+        autoClose={1000}  
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light" />
       <Header />
       <Routes>
         <Route path="/" element={<Homepage />} />
@@ -119,13 +128,21 @@ function App() {
           }
         />
         <Route
+          path="/superadmin"
+          element={
+            // <ProtectedRoute user={user} allowedTypes={["SuperAdmin"]}>
+              <SuperAdminDashboard />
+            // </ProtectedRoute>
+          }
+        />
+        <Route
           path='/viewdocuments'
           element={<ViewDocuments />}
         />
         <Route
-          path="/dashboard"
+          path="/adminDashboard"
           element={
-            <ProtectedRoute user={user} allowedTypes={["Admin"]}>
+            <ProtectedRoute user={user} allowedTypes={["Admin", "User"]}>
               <UserDashboard />
             </ProtectedRoute>
           }

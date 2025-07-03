@@ -5,12 +5,14 @@ export default function ToastMessage(message: string,type: string, CID : String)
     if (type === "error") {
         console.error(message);
         toast .error(message, {
-            position: "bottom-right"
+            position: "top-right",
+            autoClose: 1000,
         });
     } else if (type === "success") {
         console.log(message);
         toast.success(message, {
-            position: "bottom-right"
+            position: "top-right",
+            autoClose: 1000,
         });
     }else if(type === "successs"){
         console.log("=====>",message);
@@ -20,11 +22,14 @@ export default function ToastMessage(message: string,type: string, CID : String)
               title: "Success Upload",
               text: `Your files are uploaded successfully ${CID}`,
             },
+            position: "top-right",
+            autoClose: 1000,
           });
     } else {
         console.log(message);
         toast.warning(message, {
-            position: "bottom-right"
+            position: "top-right",
+            autoClose: 1000,
         });
     }
     
