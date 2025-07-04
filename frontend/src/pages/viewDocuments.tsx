@@ -6,7 +6,7 @@ import fileIcons from '../assets/fileIcons.png'
 import { useLocation } from 'react-router-dom';
 
 const ipfs = create({ url: 'http://127.0.0.1:5001' });
-const ENCRYPTION_KEY = 'your-32-char-secret-key-123456789012';
+const ENCRYPTION_KEY = 'your-strong-secret-key';
 
 interface DecryptedFile {
     url: string;

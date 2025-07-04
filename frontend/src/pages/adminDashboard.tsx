@@ -19,7 +19,7 @@ export default function UserDashboard() {
   const [showModal, setShowModal] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const usersPerPage = 10;
-  const [activeTab, setActiveTab] = useState("users");
+  const [activeTab, setActiveTab] = useState("dashboard");
   const location = useLocation();
 
   const adminLocalData = location.state?.admin;
@@ -137,13 +137,13 @@ export default function UserDashboard() {
         <ul className="space-y-4 font-medium text-black">
           <nav className="flex flex-col gap-2">
             <button
-              className={`flex items-center gap-3 px-4 py-3 rounded-xl text-base font-medium transition ${activeTab === "users"
+              className={`flex items-center gap-3 px-4 py-3 rounded-xl text-base font-medium transition ${activeTab === "dashboard"
                 ? "bg-gray-700 text-white"
                 : "text-black hover:bg-gray-700 hover:text-white"
                 }`}
-              onClick={() => setActiveTab("users")}
+              onClick={() => setActiveTab("dashboard")}
             >
-              <FaUsers className="text-lg" /> Users
+              <FaUsers className="text-lg" /> Dashboard
             </button>
             <button
               className={`flex items-center gap-3 px-4 py-3 rounded-xl text-base font-medium transition ${activeTab === "report"
@@ -159,7 +159,7 @@ export default function UserDashboard() {
       </aside>
 
       <div className="flex-1 p-6 rounded-3xl">
-        {activeTab === "users" && (
+        {activeTab === "dashboard" && (
           <div>
             <h2 className="text-4xl font-bold text-gray-800 mb-8">{adminLocalData?.name || "Admin"} Dashboard</h2>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-10">

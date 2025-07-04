@@ -62,4 +62,14 @@ export const unblockUser = async (req: Request, res: Response) => {
         res.status(400).json({ error: error.message });
     }
 };
+export const addDocument = async (req: Request, res: Response) => {
+    try {
+        const { userId, cid, type, walletAddress } = req.body;
+        const document = await authService.addDocument(userId, cid, type, walletAddress);
+        res.status(200).json({ message: "Document added successfully", document });
+    } catch (error: any) {
+        res.status(400).json({ error: error.message });
+    }
+};
+
 

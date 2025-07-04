@@ -130,7 +130,7 @@ export default function UserProfile() {
   const fetchContentFromIpfs = async (cid: string, filename = "InformationForm.json") => {
     const gateways = [
       `http://127.0.0.1:8080/ipfs/${cid}/${filename}`,
-      `http://143.110.176.177:8080/ipfs/${cid}/${filename}`,
+      // `http://143.110.176.177:8080/ipfs/${cid}/${filename}`,
     ];
 
     for (const url of gateways) {
@@ -141,7 +141,6 @@ export default function UserProfile() {
         const encryptedText = await res.text();
         const decryptedBytes = CryptoJS.AES.decrypt(encryptedText, SECRET_KEY);
         const decryptedText = decryptedBytes.toString(CryptoJS.enc.Utf8);
-
         return JSON.parse(decryptedText);
       } catch {
 
@@ -192,7 +191,7 @@ export default function UserProfile() {
         </div>
       )}
 
-      <div className="w-full max-w-7xl">
+      {/* <div className="w-full max-w-7xl">
         {loading ? (
           <p className="text-gray-600 text-center">Loading documents...</p>
         ) : files.length === 0 ? (
@@ -265,7 +264,7 @@ export default function UserProfile() {
             )}
           </>
         )}
-      </div>
+      </div> */}
 
       {editOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50">

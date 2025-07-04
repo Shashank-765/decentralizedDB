@@ -89,6 +89,8 @@ const CustomForm: React.FC = () => {
         path: "InformationForm.json",
         content: encryptedBlob,
       };
+         
+      console.log(fileToUpload, 'fileToUpload')
 
       let folderCid = "";
       for await (const file of ipfs.addAll([fileToUpload], { wrapWithDirectory: true })) {

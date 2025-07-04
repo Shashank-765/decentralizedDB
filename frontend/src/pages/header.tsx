@@ -158,7 +158,6 @@ function Header() {
   const handleClick = (type: string) => {
     setOpen(false);
     setMenuOpen(false)
-    navigate(`/upload/${type}`);
   };
 
   const setPopupOpen = () => {
@@ -191,38 +190,12 @@ function Header() {
                     className="relative"
                     onClick={() => setPopupOpen()}
                   >
-                    <button
-                      ref={buttonRef}
-                      className="text-gray-700 hover:text-gray-800 text-lg w-32 h-12 flex items-center justify-center rounded-full bg-white shadow-md hover:shadow-lg transition"
-                    >
-                      Upload
-                    </button>
-
-                    {open && (
-                      <ul
-                        ref={popupRef}
-                        className="absolute top-full ml-0 mt-1 w-36 bg-white border rounded-xl shadow-lg z-10"
-                      >
-                        <li
-                          className="px-4 py-2 text-center hover:bg-gray-100 cursor-pointer rounded-t-xl"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleClick("documents");
-                          }}
-                        >
-                          Documents
-                        </li>
-                        <li
-                          className="px-4 py-2 text-center hover:bg-gray-100 cursor-pointer rounded-b-xl"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleClick("information");
-                          }}
-                        >
-                          Information
-                        </li>
-                      </ul>
-                    )}
+                          <Link
+                    to="/userDashboard"
+                    className="text-gray-700 hover:text-gray-800 text-lg w-32 h-12 flex items-center justify-center rounded-full bg-white shadow-md hover:shadow-lg transition"
+                  >
+                    Dashboard
+                  </Link>
                   </li>
                 </>
               ) : (

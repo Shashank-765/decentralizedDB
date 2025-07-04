@@ -1,0 +1,742 @@
+import React, { useRef, useEffect, useState } from "react";
+import { FiHome, FiUsers, FiBarChart2 } from "react-icons/fi";
+import { FaCloudUploadAlt } from "react-icons/fa";
+import { create } from "ipfs-http-client";
+import CircularLoader from "../CircularLoader/CircularLoader";
+import ToastMessage from "./toastmessage";
+import { ethers } from "ethers";
+import config from '../../config.json';
+import CryptoJS from 'crypto-js';
+import pdficon from '../assets/pdficon.png'
+import fileIcons from '../assets/fileIcons.png'
+
+interface DecryptedFile {
+    url: string;
+    name: string;
+    mimeType: string;
+    folderName: string;
+}
+
+const ENCRYPTION_KEY = 'your-strong-secret-key';
+import axios from 'axios';
+const backendUrl = import.meta.env.VITE_BACKEND_URL;
+console.log(backendUrl, 'backendUrl')
+type Document = {
+    id: number;
+    name: string;
+    status: "approved" | "rejected";
+    adminName: string;
+};
+
+const dummyDocuments: Document[] = [
+    { id: 1, name: "User A - Doc 1", status: "approved", adminName: "Admin One" },
+    { id: 2, name: "User B - Doc 2", status: "rejected", adminName: "Admin Two" },
+    { id: 3, name: "User C - Doc 3", status: "approved", adminName: "Admin Two" },
+    { id: 4, name: "User D - Doc 4", status: "rejected", adminName: "Admin One" },
+];
+
+let provider = new ethers.providers.JsonRpcProvider(config.URL_RPC)
+// const contract = new ethers.Contract(config.contractAddress, config.abi, provider);
+
+const ipfs = create({
+    url: config.URL_IPFS,
+});
+
+
+const UserDashboard: React.FC = () => {
+    const [modalType, setModalType] = useState<"approved" | "rejected" | null>(null);
+    const modalRef = useRef<HTMLDivElement>(null);
+    const modalRef2 = useRef<HTMLDivElement>(null);
+    const [activeTab, setActiveTab] = useState("dashboard");
+    const [isCreateModelOpen, setIsCreateModelOpen] = useState(false);
+    const [files, setFiles] = useState<File[]>([]);
+    const [ipfsFile, setIpfsFile] = useState<string[]>([]);
+    const [ipfsContents, setIpfsContents] = useState<any[]>([]);
+    const [uploadProgress, setUploadProgress] = useState<number>(0);
+    const [isCircularLoading, setIsCirculrLoading] = useState(false)
+    const [loading, setLoading] = useState(false);
+    const approvedDocs = dummyDocuments.filter((doc) => doc.status === "approved");
+    const rejectedDocs = dummyDocuments.filter((doc) => doc.status === "rejected");
+    const closeModal = () => setModalType(null);
+    const [formData, setFormData] = useState({
+        name: '',
+        type: '',
+        documentId: '',
+    });
+
+    const userData = JSON.parse(localStorage.getItem("user") || "{}");
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name]: value }));
+    };
+
+    useEffect(() => {
+        if (userData?.walletAddress) {
+            const contract = new ethers.Contract(config.contractAddress, config.abi, provider);
+            contract.viewDocuments(userData.walletAddress).then(setIpfsFile).finally(() => setLoading(false));
+        }
+    }, [userData?.walletAddress]);
+
+    useEffect(() => {
+        const handleOutsideClick = (event: MouseEvent) => {
+            if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
+                closeModal();
+            }
+        };
+        if (modalType) {
+            document.addEventListener("mousedown", handleOutsideClick);
+        }
+        return () => {
+            document.removeEventListener("mousedown", handleOutsideClick);
+        };
+    }, [modalType]);
+
+    useEffect(() => {
+        const handleOutsideClick = (event: MouseEvent) => {
+            if (modalRef2.current && !modalRef2.current.contains(event.target as Node)) {
+                setIsCreateModelOpen(false);
+            }
+        };
+        if (isCreateModelOpen) {
+            document.addEventListener("mousedown", handleOutsideClick);
+        }
+        return () => {
+            document.removeEventListener("mousedown", handleOutsideClick);
+        };
+    }, [isCreateModelOpen]);
+
+    useEffect(() => {
+        if (isCreateModelOpen) {
+            document.body.classList.add('overflow-hidden');
+        } else {
+            document.body.classList.remove('overflow-hidden');
+        }
+
+        return () => {
+            document.body.classList.remove('overflow-hidden');
+        };
+    }, [isCreateModelOpen]);
+
+
+    const fetchContentFromIpfs = async (cid: string, filename = "JSONdata.json") => {
+        const gateways = [
+            `http://127.0.0.1:8080/ipfs/${cid}/${filename}`,
+            // `http://143.110.176.177:8080/ipfs/${cid}/${filename}`,
+        ];
+
+        for (const url of gateways) {
+            try {
+                const res = await fetch(url);
+                if (!res.ok) continue;
+                const encryptedText = await res.text();
+                const decryptedBytes = CryptoJS.AES.decrypt(encryptedText, ENCRYPTION_KEY);
+                const decryptedText = decryptedBytes.toString(CryptoJS.enc.Utf8)
+                return JSON.parse(decryptedText);
+            } catch {
+                console.log('catch')
+            }
+        }
+        return null;
+    };
+    useEffect(() => {
+        const decryptFile = (encryptedText: string): { blob: Blob | null, mimeType: string } => {
+            try {
+                const decrypted = CryptoJS.AES.decrypt(encryptedText, ENCRYPTION_KEY);
+                const payload = decrypted.toString(CryptoJS.enc.Utf8);
+
+                if (!payload || !payload.includes('::')) throw new Error('Invalid encrypted format');
+
+                const [mimeType, base64Str] = payload.split('::');
+                const byteCharacters = atob(base64Str);
+                const byteArray = new Uint8Array([...byteCharacters].map(char => char.charCodeAt(0)));
+
+                return {
+                    blob: new Blob([byteArray], { type: mimeType }),
+                    mimeType,
+                };
+            } catch (err) {
+                console.error('❌ Decryption failed:', err);
+                return { blob: null, mimeType: 'text/plain' };
+            }
+        };
+
+        const fetchFiles = async () => {
+            setLoading(true);
+            const decryptedDocs: DecryptedFile[] = [];
+
+            try {
+                const results = await Promise.all(
+                    ipfsFile.map(async (cidPath) => {
+                        const content = await fetchContentFromIpfs(cidPath); // expects object with folderCid
+                        return content;
+                    })
+                );
+
+                for (const file of results) {
+                    const folderCid = file?.folderCid;
+                    const folderName = file?.name;
+                    if (!folderCid) continue;
+
+                    try {
+                        // 1. Get files inside the folder CID
+                        for await (const entry of ipfs.ls(folderCid)) {
+                            if (entry.type === 'file') {
+                                const fileCid = entry.cid;
+                                const fileName = entry.name;
+
+                                const chunks: Uint8Array[] = [];
+                                for await (const chunk of ipfs.cat(fileCid)) {
+                                    chunks.push(chunk);
+                                }
+
+                                const totalSize = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
+                                const combined = new Uint8Array(totalSize);
+                                let offset = 0;
+                                for (const chunk of chunks) {
+                                    combined.set(chunk, offset);
+                                    offset += chunk.length;
+                                }
+
+                                const encryptedText = new TextDecoder().decode(combined);
+                                const { blob, mimeType } = decryptFile(encryptedText);
+
+                                if (blob) {
+                                    decryptedDocs.push({
+                                        name: fileName.replace('.enc', ''),
+                                        url: URL.createObjectURL(blob),
+                                        mimeType,
+                                        folderName: folderName, // Add back the folderName property
+                                    });
+                                }
+                            }
+                        }
+                    } catch (e) {
+                        console.error(`❌ Failed to decrypt CID ${folderCid}:`, e);
+                    }
+                }
+
+
+                setIpfsContents(decryptedDocs); // Final result
+            } catch (err) {
+                console.error('❌ Overall IPFS file fetch error:', err);
+            }
+
+            setLoading(false);
+        };
+
+        if (ipfsFile?.length > 0) {
+            fetchFiles();
+        }
+    }, [ipfsFile]);
+
+    const handleFiles = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const selectedFile = event.target.files?.[0];
+        if (selectedFile) {
+            setFiles([selectedFile]); // Replace existing file with new one
+        }
+        event.target.value = '';
+    };
+    const handleDrop = async (event: React.DragEvent<HTMLDivElement>) => {
+        event.preventDefault();
+
+        const items = event.dataTransfer.items;
+        const droppedFiles: File[] = [];
+
+        const traverseFileTree = async (item: any, path = ""): Promise<void> => {
+            return new Promise((resolve) => {
+                if (item.isFile) {
+                    item.file((file: File) => {
+                        const fullPathFile = new File([file], path + file.name, { type: file.type });
+                        droppedFiles.push(fullPathFile);
+                        resolve();
+                    });
+                } else if (item.isDirectory) {
+                    const dirReader = item.createReader();
+                    dirReader.readEntries(async (entries: any[]) => {
+                        for (const entry of entries) {
+                            await traverseFileTree(entry, path + item.name + "/");
+                        }
+                        resolve();
+                    });
+                }
+            });
+        };
+
+        const promises: Promise<void>[] = [];
+
+        for (let i = 0; i < items.length; i++) {
+            const item = items[i].webkitGetAsEntry?.();
+            if (item) {
+                promises.push(traverseFileTree(item));
+            }
+        }
+
+        await Promise.all(promises);
+
+        if (droppedFiles.length > 0) {
+            setFiles((prev) => [...prev, ...droppedFiles]);
+        }
+    };
+    const uploadToContract = async (folderCid: any) => {
+        try {
+            const adminWallet = new ethers.Wallet(config.adminPrivateKey, provider);
+
+            const wallet = userData.walletAddress || "";
+
+            if (!wallet) {
+                setIsCirculrLoading(false);
+                ToastMessage(`Wallet address not found!`, "error", "")
+                return;
+            }
+
+            const contract = new ethers.Contract(config.contractAddress, config.abi, adminWallet);
+
+            console.log('wallet, folderCid', wallet, folderCid)
+            const tx = await contract.uploadDocument(wallet, folderCid);
+            await tx.wait();
+            setFiles([])
+            setUploadProgress(0);
+            setIsCirculrLoading(false);
+            ToastMessage("The Document uploaded Successfully", "successs", tx.hash || "")
+            console.log("Transaction Confirmed:", tx.hash);
+        } catch (error: any) {
+            setFiles([])
+            setIsCirculrLoading(false);
+            setUploadProgress(0);
+            ToastMessage(`${error?.reason}`, "error", "")
+            console.error("Transaction Failed:", error?.reason);
+        }
+    };
+
+    const encryptFile = async (file: File): Promise<File> => {
+        const arrayBuffer = await file.arrayBuffer();
+        const binary = new Uint8Array(arrayBuffer);
+
+        let binaryStr = '';
+        for (let i = 0; i < binary.length; i++) {
+            binaryStr += String.fromCharCode(binary[i]);
+        }
+        const base64 = btoa(binaryStr);
+
+        const payload = `${file.type}::${base64}`;
+
+        const encrypted = CryptoJS.AES.encrypt(payload, ENCRYPTION_KEY).toString();
+        const blob = new Blob([encrypted], { type: 'text/plain' });
+
+        return new File([blob], file.name + '.enc', { type: 'text/plain' });
+    };
+
+    const encryptJsonData = async (jsonData: any) => {
+        const jsonString = JSON.stringify(jsonData);
+        const encryptedBase64 = CryptoJS.AES.encrypt(jsonString, ENCRYPTION_KEY).toString();
+        const encryptedBlob = new Blob([encryptedBase64], { type: "text/plain" });
+        return {
+            path: 'JSONdata.json',
+            content: encryptedBlob,
+        };
+    };
+    const handleUpload = async () => {
+        setIsCirculrLoading(true);
+        console.log(files, 'files')
+        if (files.length === 0) {
+            setIsCirculrLoading(false);
+            ToastMessage("Please select a file.", "error", "");
+            return;
+        }
+
+        setUploadProgress(0);
+        let progress = 0;
+        const encryptedFiles: File[] = [];
+
+        for (const file of files) {
+            const encrypted = await encryptFile(file);
+            encryptedFiles.push(encrypted);
+        }
+
+        let folderCid: string | undefined;
+        let lastFile: any = null;
+        const totalFiles = encryptedFiles.length;
+        let uploadedCount = 0;
+
+        for await (const file of ipfs.addAll(encryptedFiles, { wrapWithDirectory: true })) {
+            lastFile = file;
+            folderCid = file.cid.toString();
+
+            if (file.path !== "") {
+                uploadedCount++;
+                progress = Math.min((uploadedCount / totalFiles) * 100, 100);
+                setUploadProgress(progress);
+            }
+        }
+
+        if (lastFile?.path && !lastFile.path.includes("/")) {
+            folderCid = lastFile.cid.toString();
+        }
+
+        if (progress >= 100 && folderCid) {
+
+            console.log(folderCid, 'folderCid documents only============>');
+            const jsonDataToStoreCid = {
+                folderCid,
+                name: formData.name,
+                type: formData.type,
+                documentId: formData.documentId,
+                status: "pending",
+            }
+
+            console.log(jsonDataToStoreCid, 'jsonDataToStoreCid============>')
+            const encryptedData = await encryptJsonData(jsonDataToStoreCid);
+            console.log(encryptedData, 'encryptedData')
+
+            let foldercid2 = ""
+            for await (const file of ipfs.addAll([encryptedData], { wrapWithDirectory: true })) {
+                foldercid2 = file.cid.toString();
+            }
+
+            console.log(foldercid2, 'this is second foldercid2 =============>')
+
+            const response = await axios.post(`${backendUrl}/api/auth/addDocument`, {
+                userId: userData?._id,
+                cid: foldercid2,
+                type: formData.type,
+                walletAddress: userData?.walletAddress,
+            },
+                { headers: { _token: userData?.token } });
+            console.log(response, 'response')
+            setFiles([])
+            setUploadProgress(0);
+            setIsCirculrLoading(false);
+            setFormData({
+                name: '',
+                type: '',
+                documentId: '',
+            })
+            await uploadToContract(foldercid2);
+        }
+
+        setIsCirculrLoading(false);
+    };
+    const handleRemoveFile = (indexToRemove: number) => {
+        setFiles((prevFiles) => prevFiles.filter((_, idx) => idx !== indexToRemove));
+    };
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        console.log(formData, 'formData')
+        if (!formData.name || !formData.type || !formData.documentId) {
+            ToastMessage("Please fill out all fields.", "error", "");
+            return;
+        }
+        handleUpload();
+    };
+
+
+    return (
+        <div className="min-h-screen overflow-x-hidden rounded-3xl bg-white mx-4 flex ">
+            <aside className="w-[256px] shadow-2xl p-6 bg-gray-300 hidden mt-10 mb-5 md:block rounded-2xl text-black">
+                <h2 className="text-2xl text-center font-extrabold text-black mb-8">User</h2>
+                <ul className="space-y-4 font-medium text-black">
+                    <nav className="flex flex-col gap-2">
+                        <button
+                            className={`flex items-center gap-3 px-4 py-3 rounded-xl text-base font-medium transition
+              ${activeTab === "dashboard"
+                                    ? "bg-gray-700 text-white"
+                                    : "text-black hover:bg-gray-700 hover:text-white"
+                                }`}
+                            onClick={() => setActiveTab("dashboard")}
+                        >
+                            <FiHome className="text-lg transition-colors duration-200" />
+                            Dashboard
+                        </button>
+
+                        <button
+                            className={`flex items-center gap-3 px-4 py-3 rounded-xl text-base font-medium transition
+              ${activeTab === "documents"
+                                    ? "bg-gray-700 text-white"
+                                    : "text-black hover:bg-gray-700 hover:text-white"
+                                }`}
+                            onClick={() => setActiveTab("documents")}
+                        >
+                            <FiUsers className="text-lg transition-colors duration-200" />
+                            Documents
+                        </button>
+
+                        <button
+                            className={`flex items-center gap-3 px-4 py-3 rounded-xl text-base font-medium transition
+              ${activeTab === "reports"
+                                    ? "bg-gray-700 text-white"
+                                    : "text-black hover:bg-gray-700 hover:text-white"
+                                }`}
+                            onClick={() => setActiveTab("reports")}
+                        >
+                            <FiBarChart2 className="text-lg transition-colors duration-200" />
+                            Reports
+                        </button>
+                    </nav>
+                </ul>
+            </aside>
+
+            {/* Main Content */}
+            <main className="flex-1 p-5 md:p-5 overflow-x-hidden">
+                <div className="flex items-center justify-between mb-8">
+                    <h1 className="text-3xl font-bold text-gray-800">User Dashboard</h1>
+                    {
+                        activeTab == 'documents' && (
+                            <button
+                                className="bg-gray-700 hover:bg-gray-600 text-white align-center flex items-center gap-2 py-2 px-4 rounded-xl"
+                                onClick={() => setIsCreateModelOpen(true)}
+                            >
+                                + Upload Document
+                            </button>
+                        )
+                    }
+                </div>
+
+                {activeTab === "dashboard" &&
+                    <>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+                            <StatCard label="Approved Document" value={approvedDocs.length} color="green"
+                            />
+                            <StatCard label="Rejected Document" value={rejectedDocs.length} color="red"
+                            />
+                        </div>
+
+                    </>
+                }
+
+                {
+                    activeTab === "documents" &&
+                    <>
+                        <div className="max-w-7xl mx-auto px-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mt-8 mb-8">
+                            {ipfsContents?.map((file: any, index: number) => (
+                                <div
+                                    key={index}
+                                    className="bg-white w-full max-w-sm mx-auto rounded-xl shadow-xl flex flex-col items-center hover:scale-105 transition-transform duration-200 p-4"
+                                >
+                                    {
+                                        file.mimeType === 'application/pdf' ? (
+                                            <img
+                                                src={pdficon}
+                                                alt="PDF"
+                                                className="w-40 h-40 sm:w-44 sm:h-44 xl:w-48 xl:h-48 object-contain rounded-lg shadow-md"
+                                            />
+                                        ) : file.mimeType === 'image/jpeg' ? (
+                                            <img
+                                                src={file?.url}
+                                                alt="image"
+                                                className="w-40 h-40 sm:w-44 sm:h-44 xl:w-48 xl:h-48 object-cover rounded-lg shadow-md"
+                                            />
+                                        ) : (
+                                            <img
+                                                src={fileIcons}
+                                                alt="File Icon"
+                                                className="w-40 h-40 sm:w-44 sm:h-44 xl:w-48 xl:h-48 object-contain rounded-lg shadow-md"
+                                            />
+                                        )
+                                    }
+                                    <p className="text-sm font-medium text-gray-700 mt-2 text-center break-words">
+                                        {file?.folderName}
+                                    </p>
+                                </div>
+                            ))}
+                        </div>
+
+                    </>
+                }
+
+                {
+                    activeTab === "reports" &&
+                    <>
+                        <div className="flex-1 min-w-0 bg-white shadow-2xl rounded-2xl overflow-hidden">
+                            <h2 className="text-lg font-semibold text-gray-700">Reports</h2>
+                            <div className="overflow-x-auto">
+                            </div>
+                        </div>
+                        <h1 className="text-lg text-center font-semibold text-gray-700 px-6 py-4 border-b">comming soon...</h1>
+                    </>
+                }
+
+                {
+                    isCreateModelOpen && (
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                            <div
+                                ref={modalRef2}
+                                className="bg-white p-8 md:p-10 rounded-2xl shadow-2xl w-[95%] xl:w-[1100px] max-h-[90vh] overflow-y-auto no-scrollbar"
+                            >
+                                <h1 className="text-3xl text-center font-semibold text-gray-700 px-6 py-4">Create Document</h1>
+                                <form className="w-full mt-3 flex flex-col gap-8">
+                                    {/* Input Fields */}
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                        <div>
+                                            <label htmlFor="name" className="block text-sm font-medium text-gray-700">Name</label>
+                                            <input
+                                                id="name"
+                                                name="name"
+                                                value={formData.name}
+                                                onChange={handleChange}
+                                                type="text"
+                                                placeholder="Enter name"
+                                                className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500"
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label htmlFor="type" className="block text-sm font-medium text-gray-700">Type</label>
+                                            <select
+                                                id="type"
+                                                name="type"
+                                                value={formData.type}
+                                                onChange={handleChange}
+                                                className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500"
+                                            >
+                                                <option value="">Select type</option>
+                                                <option value="pdf">PDF</option>
+                                                <option value="image">Image</option>
+                                                <option value="doc">DOC</option>
+                                            </select>
+                                        </div>
+
+                                        <div>
+                                            <label htmlFor="documentId" className="block text-sm font-medium text-gray-700">Document ID</label>
+                                            <input
+                                                id="documentId"
+                                                name="documentId"
+                                                value={formData.documentId}
+                                                onChange={handleChange}
+                                                type="text"
+                                                placeholder="Enter Document ID"
+                                                className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* File Upload Box */}
+                                    <div
+                                        className="w-full p-8 rounded-lg bg-gray-100 border-2 border-dashed border-gray-300 hover:border-indigo-500 transition-all flex flex-col items-center justify-center cursor-pointer shadow-lg"
+                                        onDragOver={(e) => e.preventDefault()}
+                                        onDrop={handleDrop}
+                                    >
+                                        <FaCloudUploadAlt className="text-indigo-500 text-6xl mb-4" />
+                                        <p className="text-gray-600 text-center">Drag & Drop your files here</p>
+                                        <p className="text-gray-500 text-sm">or</p>
+
+                                        <label className="mt-4 px-6 py-3 bg-indigo-500 text-white text-lg font-medium rounded-full shadow-md hover:bg-indigo-600 transition cursor-pointer">
+                                            Select Files
+                                            <input
+                                                type="file"
+                                                className="hidden"
+                                                accept="image/*,application/pdf,text/*,video/*,audio/*,application/zip,application/x-zip-compressed"
+                                                onChange={handleFiles}
+                                            />
+                                        </label>
+                                    </div>
+
+                                    {/* Selected Files */}
+                                    {files.length > 0 && (
+                                        <div className="bg-gray-200 p-4 rounded-lg shadow-md border">
+                                            <h3 className="text-lg font-semibold text-gray-700 mb-2">Selected Files</h3>
+                                            <ul className="space-y-2">
+                                                {files.map((file, index) => (
+                                                    <li
+                                                        key={index}
+                                                        className="text-gray-700 bg-white px-4 py-2 rounded-md shadow-sm flex justify-between items-center"
+                                                    >
+                                                        <div className="flex items-center gap-2">
+                                                            📄 {file.name}
+                                                            <span className="text-xs text-gray-500 ml-2">
+                                                                {(file.size / 1024).toFixed(2)} KB
+                                                            </span>
+                                                        </div>
+                                                        <button
+                                                            onClick={() => handleRemoveFile(index)}
+                                                            className="text-red-500 hover:text-red-700 text-lg font-bold ml-4"
+                                                            aria-label="Remove file"
+                                                        >
+                                                            &times;
+                                                        </button>
+                                                    </li>
+                                                ))}
+                                            </ul>
+
+                                        </div>
+                                    )}
+
+                                    {/* Upload Progress */}
+                                    {uploadProgress > 0 && (
+                                        <div>
+                                            <div className="w-full bg-gray-300 rounded-full h-4">
+                                                <div
+                                                    className="bg-indigo-500 h-4 rounded-full transition-all"
+                                                    style={{ width: `${uploadProgress}%` }}
+                                                ></div>
+                                            </div>
+                                            <p className="text-center text-gray-600 mt-2">{uploadProgress}% Uploaded</p>
+                                        </div>
+                                    )}
+
+                                    {/* Buttons */}
+                                    <div className="flex flex-col sm:flex-row justify-between gap-4">
+                                        <button
+                                            type="button"
+                                            onClick={() => setIsCreateModelOpen(false)}
+                                            className="w-full sm:w-auto bg-gray-200 hover:bg-gray-300 text-gray-700 py-3 px-6 rounded transition"
+                                        >
+                                            Close
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={handleSubmit}
+                                            className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-md shadow-md transition"
+                                        >
+                                            {isCircularLoading ? <CircularLoader size={20} /> : 'Submit'}
+                                        </button>
+
+                                        {/* {files.length > 0 && (
+                                            <button
+                                                type="button"
+                                                onClick={handleUpload}
+                                                className="w-full sm:w-auto bg-indigo-500 text-white py-3 px-6 rounded-md font-semibold shadow-md hover:bg-indigo-600 transition"
+                                            >
+                                                {isCircularLoading ? <CircularLoader size={20} /> : 'Upload Files'}
+                                            </button>
+                                        )} */}
+
+
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    )
+                }
+            </main>
+        </div>
+    );
+};
+
+// Reusable StatCard Component
+const StatCard: React.FC<{
+    label: string;
+    value: number;
+    color: "blue" | "green" | "red" | "purple";
+    onClick?: () => void;
+}> = ({ label, value, color, onClick }) => {
+    const baseColor = {
+        blue: "text-blue-600 bg-blue-100",
+        green: "text-green-600 bg-green-100",
+        red: "text-red-600 bg-red-100",
+        purple: "text-purple-600 bg-purple-100",
+    }[color];
+
+    return (
+        <div
+            onClick={onClick}
+            className={`rounded-2xl shadow-md p-8 hover:shadow-lg transition ${onClick ? "hover:bg-opacity-90" : ""
+                } ${baseColor}`}
+        >
+            <h3 className="text-lg font-semibold">{label}</h3>
+            <p className="text-3xl font-bold mt-2">{value}</p>
+        </div>
+    );
+};
+
+export default UserDashboard;

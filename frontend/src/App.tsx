@@ -3,13 +3,12 @@ import { useEffect, useState } from 'react';
 
 import type { Book } from './types';
 import Homepage from './pages/homepage';
-import ForgotPassword from './pages/forgetpassword';
 import Header from './pages/header';
-import UploadPage from './pages/upload';
 import Footer from './pages/footer';
 import { ToastContainer } from 'react-toastify';
-import UserDashboard from './pages/dashboard';
+import AdminDashboard from './pages/adminDashboard';
 import UserProfile from './pages/profile';
+import UserDashboard from './pages/userDashboard';
 import config from "../config.json"
 import ProtectedRoute from './pages/protectedRoutes';
 import RestrictToUsersOnly from './pages/RestrictedUserRoutes';
@@ -104,27 +103,11 @@ function App() {
         <Route path="/" element={<Homepage />} />
         <Route path="/home" element={<Homepage />} />
         <Route
-          path="/upload/:type"
-          element={
-            <RestrictToUsersOnly user={user}>
-              <UploadPage />
-            </RestrictToUsersOnly>
-          }
-        />
-        <Route
           path="/profile"
           element={
             // <RestrictToUsersOnly user={user}>
               <UserProfile />
             // </RestrictToUsersOnly>
-          }
-        />
-        <Route
-          path="/forgotpass"
-          element={
-            <RestrictToUsersOnly user={user}>
-              <ForgotPassword />
-            </RestrictToUsersOnly>
           }
         />
         <Route
@@ -143,8 +126,16 @@ function App() {
           path="/adminDashboard"
           element={
             <ProtectedRoute user={user} allowedTypes={["Admin", "User"]}>
-              <UserDashboard />
+              <AdminDashboard />
             </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/userDashboard"
+          element={
+            // <ProtectedRoute user={user} allowedTypes={["User"]}>
+              <UserDashboard />
+            // </ProtectedRoute>
           }
         />
         <Route path="/not-found" element={<NotFound />} />
