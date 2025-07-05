@@ -105,9 +105,9 @@ function App() {
         <Route
           path="/profile"
           element={
-            // <RestrictToUsersOnly user={user}>
+            <RestrictToUsersOnly user={user}>
               <UserProfile />
-            // </RestrictToUsersOnly>
+            </RestrictToUsersOnly>
           }
         />
         <Route
@@ -133,9 +133,9 @@ function App() {
         <Route
           path="/userDashboard"
           element={
-            // <ProtectedRoute user={user} allowedTypes={["User"]}>
+            <ProtectedRoute user={user} allowedTypes={["User", "Admin"]}>
               <UserDashboard />
-            // </ProtectedRoute>
+            </ProtectedRoute>
           }
         />
         <Route path="/not-found" element={<NotFound />} />

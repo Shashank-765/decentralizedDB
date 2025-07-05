@@ -1,16 +1,33 @@
-import { useState, useEffect } from "react";
-import { FaEye, FaCheckCircle, FaTimesCircle, FaUsers, FaChartPie } from "react-icons/fa";
+import { useState, useEffect, useRef } from "react";
+import { FaEye, FaCheckCircle, FaTimesCircle, FaUsers, FaChartPie,FaBan } from "react-icons/fa";
 import axios from "axios";
 import { ethers } from "ethers";
 import config from "../../config.json";
 import ToastMessage from "./toastmessage";
 import blockIcon from '../assets/prohibition.png';
 import unblock from '../assets/unlock.png';
-import { useLocation } from "react-router-dom";
-
+import { useLocation, useNavigate } from "react-router-dom";
+import CryptoJS from 'crypto-js';
+import { create } from 'ipfs-http-client';
 const provider = new ethers.providers.JsonRpcProvider(config.URL_RPC);
 const adminWallet = new ethers.Wallet(config.adminPrivateKey, provider);
 const contract = new ethers.Contract(config.contractAddress, config.abi, adminWallet);
+
+interface DecryptedFile {
+  documentName: string;
+  url: string;
+  mimeType: string;
+  index: number;
+  approved: boolean;
+  folderName: string;
+  type: string;
+}
+const ENCRYPTION_KEY = 'your-strong-secret-key';
+
+const ipfs = create({
+  url: config.URL_IPFS,
+});
+
 
 export default function UserDashboard() {
   const [users, setUsers] = useState<any[]>([]);
@@ -19,12 +36,28 @@ export default function UserDashboard() {
   const [showModal, setShowModal] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const usersPerPage = 10;
-  const [activeTab, setActiveTab] = useState("dashboard");
+  const [activeTab, setActiveTab] = useState("Dashboard");
   const location = useLocation();
-
+  const navigate = useNavigate();
   const adminLocalData = location.state?.admin;
-  console.log(adminLocalData, 'this is admin data')
+  const localUserData = JSON.parse(localStorage.getItem("user") || "{}");
+  const modalRef = useRef<HTMLDivElement>(null);
+  const decryptedDocs: DecryptedFile[] = [];
+  // const [ipfsContents, setIpfsContents] = useState<any[]>([]);
 
+  useEffect(() => {
+    const handleOutsideClick = (event: MouseEvent) => {
+      if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
+        setShowModal(false);
+      }
+    };
+    if (showModal) {
+      document.addEventListener("mousedown", handleOutsideClick);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick);
+    };
+  }, [showModal]);
 
   const fetchUsers = async () => {
     try {
@@ -33,6 +66,113 @@ export default function UserDashboard() {
       for (let i = 0; i < response.data.user.length; i++) {
         const walletAddress = response.data.user[i].walletAddress;
         const documents = await contract.viewAllDocuments(walletAddress);
+
+        const fetchContentFromIpfs = async (cid: string, filename = "JSONdata.json") => {
+          const gateways = [
+            `http://127.0.0.1:8080/ipfs/${cid}/${filename}`
+          ];
+
+          for (const url of gateways) {
+            try {
+              const res = await fetch(url);
+              if (!res.ok) continue;
+              const encryptedText = await res.text();
+              const decryptedBytes = CryptoJS.AES.decrypt(encryptedText, ENCRYPTION_KEY);
+              const decryptedText = decryptedBytes.toString(CryptoJS.enc.Utf8)
+              return JSON.parse(decryptedText);
+            } catch {
+              console.log('catch')
+            }
+          }
+          return null;
+        };
+
+        const decryptFile = (encryptedText: string): { blob: Blob | null, mimeType: string } => {
+          try {
+            const decrypted = CryptoJS.AES.decrypt(encryptedText, ENCRYPTION_KEY);
+            const payload = decrypted.toString(CryptoJS.enc.Utf8);
+
+            if (!payload || !payload.includes('::')) throw new Error('Invalid encrypted format');
+
+            const [mimeType, base64Str] = payload.split('::');
+            const byteCharacters = atob(base64Str);
+            const byteArray = new Uint8Array([...byteCharacters].map(char => char.charCodeAt(0)));
+
+            return {
+              blob: new Blob([byteArray], { type: mimeType }),
+              mimeType,
+            };
+          } catch (err) {
+            console.error('Decryption failed:', err);
+            return { blob: null, mimeType: 'text/plain' };
+          }
+        };
+
+
+         
+          try {
+            const results = await Promise.all(
+              documents.map(async (file: any,index: number) => {
+                 let isapproved = file[1];
+                const content = await fetchContentFromIpfs(file[0]);
+                return {
+                  ...content,
+                  index,
+                  approved:isapproved
+                }
+              })
+            );
+
+            for (const file of results) {
+              const folderCid = file?.folderCid;
+              const folderName = file?.name;
+              const type = file?.type;
+              if (!folderCid) continue;
+
+              try {
+                for await (const entry of ipfs.ls(folderCid)) {
+                  if (entry.type === 'file') {
+                    const fileCid = entry.cid;
+                    const fileName = entry.name;
+
+                    const chunks: Uint8Array[] = [];
+                    for await (const chunk of ipfs.cat(fileCid)) {
+                      chunks.push(chunk);
+                    }
+
+                    const totalSize = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
+                    const combined = new Uint8Array(totalSize);
+                    let offset = 0;
+                    for (const chunk of chunks) {
+                      combined.set(chunk, offset);
+                      offset += chunk.length;
+                    }
+
+                    const encryptedText = new TextDecoder().decode(combined);
+                    const { blob, mimeType } = decryptFile(encryptedText);
+                    if (blob) {
+                        decryptedDocs.push({
+                        documentName: fileName.replace('.enc', ''),
+                        url: URL.createObjectURL(blob),
+                        mimeType,
+                        index: file.index,
+                        approved:file.approved,
+                        folderName: folderName,
+                        type: type,
+                      });
+                    }
+                  }
+                }
+              } catch (e) {
+                console.error(`Failed to decrypt CID ${folderCid}:`, e);
+              }
+            }
+              // setIpfsContents(decryptedDocs); 
+          } catch (err) {
+            console.error('Overall IPFS file fetch error:', err);
+          }
+
+
         let userFiles = documents.map((doc: any, index: number) => ({
           url: `https://ipfs.io/ipfs/${doc[0]}`,
           approved: doc[1],
@@ -46,7 +186,7 @@ export default function UserDashboard() {
           walletAddress,
           isBlocked: response.data.user[i].isBlocked,
           files: userFiles.length,
-          fileLinks: userFiles,
+          fileLinks: decryptedDocs,
           status: allApproved ? "Approved" : "Pending",
         });
       }
@@ -60,6 +200,8 @@ export default function UserDashboard() {
     fetchUsers();
   }, []);
 
+
+  console.log(users, 'users')
   const approve = async (walletAddress: string, index: number) => {
     try {
       const tx = await contract.verifyDocument(walletAddress, index);
@@ -91,12 +233,18 @@ export default function UserDashboard() {
     setSelectedUser(user.walletAddress);
     setShowModal(true);
   };
-
   const indexOfLastUser = currentPage * usersPerPage;
   const indexOfFirstUser = indexOfLastUser - usersPerPage;
   const currentUsers = users.slice(indexOfFirstUser, indexOfLastUser);
-  const totalApproved = users.filter((u) => u.status === "Approved").length;
-  const totalRejected = users.filter((u) => u.status !== "Approved" && u.fileLinks.length > 0).length;
+  const totalApproved = users.reduce((count, user) => {
+    return count + user.fileLinks.filter((file: any) => file.approved).length;
+  }, 0);
+    const totalRejected = users.reduce((count, user) => {
+    return count + user.fileLinks.filter((file: any) => !file.approved).length;
+  }, 0);
+    const totalPending = users.reduce((count, user) => {
+    return count + user.fileLinks.filter((file: any) => !file.approved).length;
+  }, 0);
 
   const nextPage = () => {
     if (currentPage < Math.ceil(users.length / usersPerPage)) {
@@ -112,7 +260,9 @@ export default function UserDashboard() {
 
   const blockUser = async (id: string) => {
     try {
-      await axios.post(`${config.URL_BACKEND}api/auth/blockUser`, { id });
+      await axios.post(`${config.URL_BACKEND}api/auth/blockUser`, { id },
+        { headers: { _token: localUserData?.token } }
+      );
       ToastMessage("User UnBlocked Successfully", "success", "");
       fetchUsers();
     } catch (error) {
@@ -122,12 +272,18 @@ export default function UserDashboard() {
 
   const unblockUser = async (id: string) => {
     try {
-      await axios.post(`${config.URL_BACKEND}api/auth/unblockUser`, { id });
+      await axios.post(`${config.URL_BACKEND}api/auth/unblockUser`, { id },
+        { headers: { _token: localUserData?.token } }
+      );
       ToastMessage("User Blocked Successfully", "success", "");
       fetchUsers();
     } catch (error) {
       console.error("Error unblocking user:", error);
     }
+  };
+
+  const navigateUserdahsboard = (user: any) => {
+    navigate(`/userDashboard`, { state: { user } });
   };
 
   return (
@@ -137,20 +293,20 @@ export default function UserDashboard() {
         <ul className="space-y-4 font-medium text-black">
           <nav className="flex flex-col gap-2">
             <button
-              className={`flex items-center gap-3 px-4 py-3 rounded-xl text-base font-medium transition ${activeTab === "dashboard"
+              className={`flex items-center gap-3 px-4 py-3 rounded-xl text-base font-medium transition ${activeTab === "Dashboard"
                 ? "bg-gray-700 text-white"
                 : "text-black hover:bg-gray-700 hover:text-white"
                 }`}
-              onClick={() => setActiveTab("dashboard")}
+              onClick={() => setActiveTab("Dashboard")}
             >
               <FaUsers className="text-lg" /> Dashboard
             </button>
             <button
-              className={`flex items-center gap-3 px-4 py-3 rounded-xl text-base font-medium transition ${activeTab === "report"
+              className={`flex items-center gap-3 px-4 py-3 rounded-xl text-base font-medium transition ${activeTab === "Reports"
                 ? "bg-gray-700 text-white"
                 : "text-black hover:bg-gray-700 hover:text-white"
                 }`}
-              onClick={() => setActiveTab("report")}
+              onClick={() => setActiveTab("Reports")}
             >
               <FaChartPie className="text-lg" /> Reports
             </button>
@@ -159,13 +315,15 @@ export default function UserDashboard() {
       </aside>
 
       <div className="flex-1 p-6 rounded-3xl">
-        {activeTab === "dashboard" && (
+        {activeTab === "Dashboard" && (
           <div>
-            <h2 className="text-4xl font-bold text-gray-800 mb-8">{adminLocalData?.name || "Admin"} Dashboard</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-10">
+            <h2 className="text-4xl font-bold text-gray-800 mb-8">{adminLocalData ? `${adminLocalData?.name} Dashboard` : activeTab}</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-6 mb-10">
               <StatCard label="Users" value={users.length} color="blue" />
-              <StatCard label="Approved" value={totalApproved} color="green" />
-              <StatCard label="Rejected" value={totalRejected} color="red" />
+              <StatCard label="Documents Approved" value={totalApproved} color="green" />
+              <StatCard label="Documents Rejected" value={totalRejected} color="red" />
+              <StatCard label="Documents Pending" value={totalPending} color="yellow" />
+
             </div>
 
             <div className="overflow-x-auto rounded-xl bg-white shadow">
@@ -175,7 +333,7 @@ export default function UserDashboard() {
                     <th className="py-4 px-6 text-left">User Name</th>
                     <th className="py-4 px-6 text-left">Email</th>
                     <th className="py-4 px-6 text-center">Folders</th>
-                    <th className="py-4 px-6 text-center">Preview</th>
+                    <th className="py-4 px-6 text-left">Preview</th>
                     <th className="py-4 px-6 text-center">Status</th>
                     <th className="py-4 px-6 text-center">Action</th>
                   </tr>
@@ -210,7 +368,7 @@ export default function UserDashboard() {
                         ) : (
                           <button onClick={() => unblockUser(user.id)} className="text-green-600"><img src={unblock} alt="" className="w-5 h-5 cursor-pointer" /></button>
                         )}
-                        <FaEye className="w-5 h-5 cursor-pointer" />
+                        <FaEye onClick={() => navigateUserdahsboard(user)} className="w-5 h-5 cursor-pointer" />
                       </td>
                     </tr>
                   ))}
@@ -244,12 +402,13 @@ export default function UserDashboard() {
 
             {showModal && (
               <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center px-4">
-                <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[80vh] overflow-y-auto p-8">
+                <div ref={modalRef} className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[85vh]  p-8 overflow-y-auto scrollbar-hide">
                   <h3 className="text-2xl font-bold text-gray-800 mb-6 text-center">File Previews</h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
                     {selectedFiles.map((file, index) => (
                       <div key={index} className="flex flex-col items-center bg-gray-50 p-4 rounded-lg shadow">
                         <a href={file.url} target="_blank" rel="noopener noreferrer">
+                          {/* {console.log(file.url,'this is url')} */}
                           <img
                             src={file.url}
                             alt={`File ${index + 1}`}
@@ -261,12 +420,20 @@ export default function UserDashboard() {
                         </a>
                         <p className="mt-3 text-sm font-medium text-gray-700">File {index + 1}</p>
                         {!file.approved ? (
+                          <>
+                          <div className="flex gap-2">
                           <button onClick={() => selectedUser && approve(selectedUser, file.index)} className="mt-2 px-4 py-1 bg-green-500 text-white rounded-lg hover:bg-green-600 flex items-center gap-1">
-                            <FaCheckCircle /> Approve
+                            <FaCheckCircle className="w-5 h-5" /> Approve
                           </button>
+                          <button className="mt-2 px-4 py-1 bg-red-500 text-white rounded-lg hover:bg-green-600 flex items-center gap-1">
+                          <FaBan className="w-5 h-5" /> Reject
+                        </button>
+                          </div>
+                          
+                          </>
                         ) : (
                           <span className="mt-2 text-green-600 flex items-center gap-1">
-                            <FaCheckCircle /> Approved
+                            <FaCheckCircle className="w-5 h-5" /> Approved
                           </span>
                         )}
                       </div>
@@ -283,8 +450,11 @@ export default function UserDashboard() {
           </div>
         )}
 
-        {activeTab === "report" && (
-          <div className="text-gray-700 text-xl text-center mt-20">Report Page Coming Soon...</div>
+        {activeTab === "Reports" && (
+          <>
+            <h2 className="text-4xl font-bold text-gray-800 mb-8">{activeTab}</h2>
+            <div className="text-gray-700 text-xl text-center mt-20">Report Page Coming Soon...</div>
+          </>
         )}
       </div>
     </div>
@@ -295,7 +465,7 @@ export default function UserDashboard() {
 const StatCard: React.FC<{
   label: string;
   value: number;
-  color: "blue" | "green" | "red" | "purple";
+  color: "blue" | "green" | "red" | "purple" | 'yellow';
   onClick?: () => void;
 }> = ({ label, value, color, onClick }) => {
   const baseColor = {
@@ -303,6 +473,7 @@ const StatCard: React.FC<{
     green: "text-green-600 bg-green-100",
     red: "text-red-600 bg-red-100",
     purple: "text-purple-600 bg-purple-100",
+    yellow: "text-yellow-600 bg-yellow-100",
   }[color];
 
   return (

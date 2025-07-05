@@ -9,12 +9,14 @@ import config from '../../config.json';
 import CryptoJS from 'crypto-js';
 import pdficon from '../assets/pdficon.png'
 import fileIcons from '../assets/fileIcons.png'
+import { useLocation } from "react-router-dom";
 
 interface DecryptedFile {
     url: string;
     name: string;
     mimeType: string;
     folderName: string;
+    type: string;
 }
 
 const ENCRYPTION_KEY = 'your-strong-secret-key';
@@ -24,7 +26,7 @@ console.log(backendUrl, 'backendUrl')
 type Document = {
     id: number;
     name: string;
-    status: "approved" | "rejected";
+    status: "approved" | "rejected" | "pending";
     adminName: string;
 };
 
@@ -33,6 +35,7 @@ const dummyDocuments: Document[] = [
     { id: 2, name: "User B - Doc 2", status: "rejected", adminName: "Admin Two" },
     { id: 3, name: "User C - Doc 3", status: "approved", adminName: "Admin Two" },
     { id: 4, name: "User D - Doc 4", status: "rejected", adminName: "Admin One" },
+    { id: 5, name: "User E - Doc 5", status: "pending", adminName: "Admin One" },
 ];
 
 let provider = new ethers.providers.JsonRpcProvider(config.URL_RPC)
@@ -47,7 +50,7 @@ const UserDashboard: React.FC = () => {
     const [modalType, setModalType] = useState<"approved" | "rejected" | null>(null);
     const modalRef = useRef<HTMLDivElement>(null);
     const modalRef2 = useRef<HTMLDivElement>(null);
-    const [activeTab, setActiveTab] = useState("dashboard");
+    const [activeTab, setActiveTab] = useState("Dashboard");
     const [isCreateModelOpen, setIsCreateModelOpen] = useState(false);
     const [files, setFiles] = useState<File[]>([]);
     const [ipfsFile, setIpfsFile] = useState<string[]>([]);
@@ -57,13 +60,18 @@ const UserDashboard: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const approvedDocs = dummyDocuments.filter((doc) => doc.status === "approved");
     const rejectedDocs = dummyDocuments.filter((doc) => doc.status === "rejected");
+    const pendingDocs = dummyDocuments.filter((doc) => doc.status === "pending");
     const closeModal = () => setModalType(null);
+    const [previewDoc, setPreviewDoc] = useState<DecryptedFile | null>(null);
+
+
     const [formData, setFormData] = useState({
         name: '',
         type: '',
         documentId: '',
     });
-
+    const location = useLocation();
+    const adminUser = location.state?.user;
     const userData = JSON.parse(localStorage.getItem("user") || "{}");
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -77,6 +85,42 @@ const UserDashboard: React.FC = () => {
             contract.viewDocuments(userData.walletAddress).then(setIpfsFile).finally(() => setLoading(false));
         }
     }, [userData?.walletAddress]);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
+                closePreview();
+            }
+        };
+
+        if (previewDoc) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [previewDoc]);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
+                closePreview();
+            }
+        };
+
+        if (previewDoc) {
+            document.addEventListener('mousedown', handleClickOutside);
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = 'auto';
+        }
+
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+            document.body.style.overflow = 'auto';
+        };
+    }, [previewDoc]);
 
     useEffect(() => {
         const handleOutsideClick = (event: MouseEvent) => {
@@ -139,92 +183,100 @@ const UserDashboard: React.FC = () => {
         }
         return null;
     };
-    useEffect(() => {
-        const decryptFile = (encryptedText: string): { blob: Blob | null, mimeType: string } => {
-            try {
-                const decrypted = CryptoJS.AES.decrypt(encryptedText, ENCRYPTION_KEY);
-                const payload = decrypted.toString(CryptoJS.enc.Utf8);
+    const decryptFile = (encryptedText: string): { blob: Blob | null, mimeType: string } => {
+        try {
+            const decrypted = CryptoJS.AES.decrypt(encryptedText, ENCRYPTION_KEY);
+            const payload = decrypted.toString(CryptoJS.enc.Utf8);
 
-                if (!payload || !payload.includes('::')) throw new Error('Invalid encrypted format');
+            if (!payload || !payload.includes('::')) throw new Error('Invalid encrypted format');
 
-                const [mimeType, base64Str] = payload.split('::');
-                const byteCharacters = atob(base64Str);
-                const byteArray = new Uint8Array([...byteCharacters].map(char => char.charCodeAt(0)));
+            const [mimeType, base64Str] = payload.split('::');
+            const byteCharacters = atob(base64Str);
+            const byteArray = new Uint8Array([...byteCharacters].map(char => char.charCodeAt(0)));
 
-                return {
-                    blob: new Blob([byteArray], { type: mimeType }),
-                    mimeType,
-                };
-            } catch (err) {
-                console.error('❌ Decryption failed:', err);
-                return { blob: null, mimeType: 'text/plain' };
-            }
-        };
+            return {
+                blob: new Blob([byteArray], { type: mimeType }),
+                mimeType,
+            };
+        } catch (err) {
+            console.error('❌ Decryption failed:', err);
+            return { blob: null, mimeType: 'text/plain' };
+        }
+    };
 
-        const fetchFiles = async () => {
-            setLoading(true);
-            const decryptedDocs: DecryptedFile[] = [];
+    const fetchFiles = async (filter: string = "all") => {
+        setIsCirculrLoading(true);
+        setLoading(true);
+        const decryptedDocs: DecryptedFile[] = [];
 
-            try {
-                const results = await Promise.all(
-                    ipfsFile.map(async (cidPath) => {
-                        const content = await fetchContentFromIpfs(cidPath); // expects object with folderCid
-                        return content;
-                    })
-                );
+        try {
+            const results = await Promise.all(
+                ipfsFile.map(async (cidPath) => {
+                    const content = await fetchContentFromIpfs(cidPath); // expects object with folderCid
+                    return content;
+                })
+            );
 
-                for (const file of results) {
-                    const folderCid = file?.folderCid;
-                    const folderName = file?.name;
-                    if (!folderCid) continue;
+            for (const file of results) {
+                const folderCid = file?.folderCid;
+                const folderName = file?.name;
+                const type = file?.type;
+                if (!folderCid) continue;
 
-                    try {
-                        // 1. Get files inside the folder CID
-                        for await (const entry of ipfs.ls(folderCid)) {
-                            if (entry.type === 'file') {
-                                const fileCid = entry.cid;
-                                const fileName = entry.name;
+                try {
+                    // 1. Get files inside the folder CID
+                    for await (const entry of ipfs.ls(folderCid)) {
+                        if (entry.type === 'file') {
+                            const fileCid = entry.cid;
+                            const fileName = entry.name;
 
-                                const chunks: Uint8Array[] = [];
-                                for await (const chunk of ipfs.cat(fileCid)) {
-                                    chunks.push(chunk);
-                                }
+                            const chunks: Uint8Array[] = [];
+                            for await (const chunk of ipfs.cat(fileCid)) {
+                                chunks.push(chunk);
+                            }
 
-                                const totalSize = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
-                                const combined = new Uint8Array(totalSize);
-                                let offset = 0;
-                                for (const chunk of chunks) {
-                                    combined.set(chunk, offset);
-                                    offset += chunk.length;
-                                }
+                            const totalSize = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
+                            const combined = new Uint8Array(totalSize);
+                            let offset = 0;
+                            for (const chunk of chunks) {
+                                combined.set(chunk, offset);
+                                offset += chunk.length;
+                            }
 
-                                const encryptedText = new TextDecoder().decode(combined);
-                                const { blob, mimeType } = decryptFile(encryptedText);
+                            const encryptedText = new TextDecoder().decode(combined);
+                            const { blob, mimeType } = decryptFile(encryptedText);
 
-                                if (blob) {
-                                    decryptedDocs.push({
-                                        name: fileName.replace('.enc', ''),
-                                        url: URL.createObjectURL(blob),
-                                        mimeType,
-                                        folderName: folderName, // Add back the folderName property
-                                    });
-                                }
+                            if (blob) {
+                                decryptedDocs.push({
+                                    name: fileName.replace('.enc', ''),
+                                    url: URL.createObjectURL(blob),
+                                    mimeType,
+                                    folderName: folderName,
+                                    type: type,
+                                });
                             }
                         }
-                    } catch (e) {
-                        console.error(`❌ Failed to decrypt CID ${folderCid}:`, e);
                     }
+                } catch (e) {
+                    console.error(`Failed to decrypt CID ${folderCid}:`, e);
                 }
-
-
-                setIpfsContents(decryptedDocs); // Final result
-            } catch (err) {
-                console.error('❌ Overall IPFS file fetch error:', err);
             }
+            if (filter === "all") {
+                setIpfsContents(decryptedDocs); // Final result
+                setIsCirculrLoading(false);
+            } else {
+                const filteredContents = decryptedDocs.filter((item: any) => item.type === filter);
+                setIpfsContents(filteredContents);
+                setIsCirculrLoading(false);
+            }
+        } catch (err) {
+            setIsCirculrLoading(false);
+            console.error('Overall IPFS file fetch error:', err);
+        }
 
-            setLoading(false);
-        };
-
+        setLoading(false);
+    };
+    useEffect(() => {
         if (ipfsFile?.length > 0) {
             fetchFiles();
         }
@@ -237,12 +289,62 @@ const UserDashboard: React.FC = () => {
         }
         event.target.value = '';
     };
+    // const handleDrop = async (event: React.DragEvent<HTMLDivElement>) => {
+    //     event.preventDefault();
+
+    //     const items = event.dataTransfer.items;
+
+    //     if (items.length !== 1) {
+    //         ToastMessage("Please drop only one file.", "error", "");
+    //         return;
+    //     }
+    //     const droppedFiles: File[] = [];
+
+
+    //     const traverseFileTree = async (item: any, path = ""): Promise<void> => {
+    //         return new Promise((resolve) => {
+    //             if (item.isFile) {
+    //                 item.file((file: File) => {
+    //                     const fullPathFile = new File([file], path + file.name, { type: file.type });
+    //                     droppedFiles.push(fullPathFile);
+    //                     resolve();
+    //                 });
+    //             }  else if (item.isDirectory) {
+    //                 ToastMessage("Folders are not allowed. Please drop only a file.", "error", "");
+    //                 resolve();
+    //             }
+    //         });
+    //     };
+
+    //     const promises: Promise<void>[] = [];
+
+    //     for (let i = 0; i < items.length; i++) {
+    //         const item = items[i].webkitGetAsEntry?.();
+    //         if (item) {
+    //             promises.push(traverseFileTree(item));
+    //         }
+    //     }
+
+    //     await Promise.all(promises);
+
+    //     if (droppedFiles.length > 0) {
+    //         setFiles((prev) => [...prev, ...droppedFiles]);
+    //     }
+    // };
+
     const handleDrop = async (event: React.DragEvent<HTMLDivElement>) => {
         event.preventDefault();
-
+    
         const items = event.dataTransfer.items;
+    
+        // ✅ [NEW] Reject if more than one item is dropped
+        if (items.length !== 1) {
+            ToastMessage("Please drop only one file.", "error", "");
+            return;
+        }
+    
         const droppedFiles: File[] = [];
-
+    
         const traverseFileTree = async (item: any, path = ""): Promise<void> => {
             return new Promise((resolve) => {
                 if (item.isFile) {
@@ -252,32 +354,24 @@ const UserDashboard: React.FC = () => {
                         resolve();
                     });
                 } else if (item.isDirectory) {
-                    const dirReader = item.createReader();
-                    dirReader.readEntries(async (entries: any[]) => {
-                        for (const entry of entries) {
-                            await traverseFileTree(entry, path + item.name + "/");
-                        }
-                        resolve();
-                    });
+                    // ✅ [NEW] Reject directories
+                    ToastMessage("Folders are not allowed. Please drop only a file.", "error", "");
+                    resolve();
                 }
             });
         };
-
-        const promises: Promise<void>[] = [];
-
-        for (let i = 0; i < items.length; i++) {
-            const item = items[i].webkitGetAsEntry?.();
-            if (item) {
-                promises.push(traverseFileTree(item));
-            }
+    
+        const item = items[0].webkitGetAsEntry?.();
+        if (item) {
+            await traverseFileTree(item);
         }
-
-        await Promise.all(promises);
-
+    
+        // ✅ [MODIFIED] Replace existing files instead of appending
         if (droppedFiles.length > 0) {
-            setFiles((prev) => [...prev, ...droppedFiles]);
+            setFiles(droppedFiles); // replaces old files
         }
     };
+    
     const uploadToContract = async (folderCid: any) => {
         try {
             const adminWallet = new ethers.Wallet(config.adminPrivateKey, provider);
@@ -297,6 +391,7 @@ const UserDashboard: React.FC = () => {
             await tx.wait();
             setFiles([])
             setUploadProgress(0);
+            setIsCreateModelOpen(false);
             setIsCirculrLoading(false);
             ToastMessage("The Document uploaded Successfully", "successs", tx.hash || "")
             console.log("Transaction Confirmed:", tx.hash);
@@ -308,7 +403,6 @@ const UserDashboard: React.FC = () => {
             console.error("Transaction Failed:", error?.reason);
         }
     };
-
     const encryptFile = async (file: File): Promise<File> => {
         const arrayBuffer = await file.arrayBuffer();
         const binary = new Uint8Array(arrayBuffer);
@@ -326,7 +420,6 @@ const UserDashboard: React.FC = () => {
 
         return new File([blob], file.name + '.enc', { type: 'text/plain' });
     };
-
     const encryptJsonData = async (jsonData: any) => {
         const jsonString = JSON.stringify(jsonData);
         const encryptedBase64 = CryptoJS.AES.encrypt(jsonString, ENCRYPTION_KEY).toString();
@@ -384,10 +477,7 @@ const UserDashboard: React.FC = () => {
                 documentId: formData.documentId,
                 status: "pending",
             }
-
-            console.log(jsonDataToStoreCid, 'jsonDataToStoreCid============>')
             const encryptedData = await encryptJsonData(jsonDataToStoreCid);
-            console.log(encryptedData, 'encryptedData')
 
             let foldercid2 = ""
             for await (const file of ipfs.addAll([encryptedData], { wrapWithDirectory: true })) {
@@ -403,9 +493,6 @@ const UserDashboard: React.FC = () => {
                 walletAddress: userData?.walletAddress,
             },
                 { headers: { _token: userData?.token } });
-            console.log(response, 'response')
-            setFiles([])
-            setUploadProgress(0);
             setIsCirculrLoading(false);
             setFormData({
                 name: '',
@@ -430,6 +517,13 @@ const UserDashboard: React.FC = () => {
         handleUpload();
     };
 
+    const openPreview = (doc: DecryptedFile) => {
+        setPreviewDoc(doc);
+    };
+
+    const closePreview = () => {
+        setPreviewDoc(null);
+    };
 
     return (
         <div className="min-h-screen overflow-x-hidden rounded-3xl bg-white mx-4 flex ">
@@ -439,11 +533,11 @@ const UserDashboard: React.FC = () => {
                     <nav className="flex flex-col gap-2">
                         <button
                             className={`flex items-center gap-3 px-4 py-3 rounded-xl text-base font-medium transition
-              ${activeTab === "dashboard"
+              ${activeTab === "Dashboard"
                                     ? "bg-gray-700 text-white"
                                     : "text-black hover:bg-gray-700 hover:text-white"
                                 }`}
-                            onClick={() => setActiveTab("dashboard")}
+                            onClick={() => setActiveTab("Dashboard")}
                         >
                             <FiHome className="text-lg transition-colors duration-200" />
                             Dashboard
@@ -451,17 +545,17 @@ const UserDashboard: React.FC = () => {
 
                         <button
                             className={`flex items-center gap-3 px-4 py-3 rounded-xl text-base font-medium transition
-              ${activeTab === "documents"
+              ${activeTab === "Documents"
                                     ? "bg-gray-700 text-white"
                                     : "text-black hover:bg-gray-700 hover:text-white"
                                 }`}
-                            onClick={() => setActiveTab("documents")}
+                            onClick={() => setActiveTab("Documents")}
                         >
                             <FiUsers className="text-lg transition-colors duration-200" />
                             Documents
                         </button>
 
-                        <button
+                        {/* <button
                             className={`flex items-center gap-3 px-4 py-3 rounded-xl text-base font-medium transition
               ${activeTab === "reports"
                                     ? "bg-gray-700 text-white"
@@ -471,7 +565,7 @@ const UserDashboard: React.FC = () => {
                         >
                             <FiBarChart2 className="text-lg transition-colors duration-200" />
                             Reports
-                        </button>
+                        </button> */}
                     </nav>
                 </ul>
             </aside>
@@ -479,72 +573,185 @@ const UserDashboard: React.FC = () => {
             {/* Main Content */}
             <main className="flex-1 p-5 md:p-5 overflow-x-hidden">
                 <div className="flex items-center justify-between mb-8">
-                    <h1 className="text-3xl font-bold text-gray-800">User Dashboard</h1>
+                    <h1 className="text-3xl font-bold text-gray-800"> {adminUser ? `${adminUser?.name} Dashboard` : activeTab} </h1>
                     {
-                        activeTab == 'documents' && (
-                            <button
-                                className="bg-gray-700 hover:bg-gray-600 text-white align-center flex items-center gap-2 py-2 px-4 rounded-xl"
-                                onClick={() => setIsCreateModelOpen(true)}
-                            >
-                                + Upload Document
-                            </button>
+                        activeTab == 'Documents' && (
+                            !adminUser && (
+                                <>
+                                    <div className="flex items-center justify-center gap-6">
+                                        <div className="relative inline-block ml-2">
+                                            <select
+                                                onChange={(e) => fetchFiles(e.target.value)}
+                                                className="appearance-none border border-gray-600 rounded-md py-2 px-4 pr-10 bg-white text-gray-800"
+                                            >
+                                                <option value="all">All</option>
+                                                <option value="uid">Aadhaar Card</option>
+                                                <option value="pan">PAN Card</option>
+                                                <option value="passport">Passport</option>
+                                                <option value="voter_id">Voter ID</option>
+                                                <option value="driving_license">Driving License</option>
+                                                <option value="ration_card">Ration Card</option>
+                                                <option value="birth_certificate">Birth Certificate</option>
+                                                <option value="income_certificate">Income Certificate</option>
+                                                <option value="caste_certificate">Caste Certificate</option>
+                                                <option value="residence_proof">Residence Proof</option>
+                                                <option value="electricity_bill">Electricity Bill</option>
+                                                <option value="bank_passbook">Bank Passbook</option>
+                                            </select>
+
+                                            {/* Custom arrow icon */}
+                                            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4">
+                                                <svg
+                                                    className="w-4 h-4 text-gray-600"
+                                                    fill="none"
+                                                    stroke="currentColor"
+                                                    strokeWidth="2"
+                                                    viewBox="0 0 24 24"
+                                                >
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                                                </svg>
+                                            </div>
+                                        </div>
+
+                                        <button
+                                            className="bg-gray-700 hover:bg-gray-600 text-white align-center flex items-center gap-2 py-2 px-4 rounded-xl"
+                                            onClick={() => setIsCreateModelOpen(true)}
+                                        >
+                                            + Upload Document
+                                        </button>
+                                    </div>
+
+                                </>
+                            )
                         )
                     }
                 </div>
 
-                {activeTab === "dashboard" &&
+                {activeTab === "Dashboard" &&
                     <>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-                            <StatCard label="Approved Document" value={approvedDocs.length} color="green"
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
+                            <StatCard label="Approved Document" value={ipfsFile.length} color="green"
                             />
                             <StatCard label="Rejected Document" value={rejectedDocs.length} color="red"
                             />
+                            <StatCard label="Pending Document" value={pendingDocs.length} color="yellow"
+                            />
                         </div>
 
                     </>
                 }
 
                 {
-                    activeTab === "documents" &&
+                    activeTab === "Documents" &&
                     <>
-                        <div className="max-w-7xl mx-auto px-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mt-8 mb-8">
-                            {ipfsContents?.map((file: any, index: number) => (
-                                <div
-                                    key={index}
-                                    className="bg-white w-full max-w-sm mx-auto rounded-xl shadow-xl flex flex-col items-center hover:scale-105 transition-transform duration-200 p-4"
-                                >
-                                    {
-                                        file.mimeType === 'application/pdf' ? (
-                                            <img
-                                                src={pdficon}
-                                                alt="PDF"
-                                                className="w-40 h-40 sm:w-44 sm:h-44 xl:w-48 xl:h-48 object-contain rounded-lg shadow-md"
-                                            />
-                                        ) : file.mimeType === 'image/jpeg' ? (
-                                            <img
-                                                src={file?.url}
-                                                alt="image"
-                                                className="w-40 h-40 sm:w-44 sm:h-44 xl:w-48 xl:h-48 object-cover rounded-lg shadow-md"
-                                            />
-                                        ) : (
-                                            <img
-                                                src={fileIcons}
-                                                alt="File Icon"
-                                                className="w-40 h-40 sm:w-44 sm:h-44 xl:w-48 xl:h-48 object-contain rounded-lg shadow-md"
-                                            />
-                                        )
-                                    }
-                                    <p className="text-sm font-medium text-gray-700 mt-2 text-center break-words">
-                                        {file?.folderName}
-                                    </p>
+                        {
+                            !ipfsContents.length && (
+                                <p className="text-center mt-20 text-gray-600">No documents found</p>
+                            )
+                        }
+
+
+                        {
+
+                            isCircularLoading ?<div className="flex items-center justify-center mt-40">
+                                <CircularLoader size={30} />
                                 </div>
-                            ))}
-                        </div>
+                                :
+                                <div className="max-w-7xl mx-auto px-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mt-15 mb-8">
+                                    {ipfsContents?.map((file: any, index: number) => (
+                                        <div
+                                            key={index}
+                                            onClick={() => openPreview(file)}
+                                            className="bg-white cursor-pointer w-full max-w-sm mx-auto rounded-xl shadow-xl flex flex-col items-center hover:scale-105 transition-transform duration-200 p-4"
+                                        >
+                                            {
+                                                file.mimeType === 'application/pdf' ? (
+                                                    <img
+                                                        src={pdficon}
+                                                        alt="PDF"
+                                                        className="w-40 h-40 sm:w-44 sm:h-44 xl:w-48 xl:h-48 object-contain rounded-lg shadow-md"
+                                                    />
+                                                ) : (file.mimeType === 'image/jpeg' || file.mimeType === 'image/png' || file.mimeType === 'image/jpg') ? (
+                                                    <img
+                                                        src={file?.url}
+                                                        alt="image"
+                                                        className="w-40 h-40 sm:w-44 sm:h-44 xl:w-48 xl:h-48 object-cover rounded-lg shadow-md"
+                                                    />
+                                                ) : (
+                                                    <img
+                                                        src={fileIcons}
+                                                        alt="File Icon"
+                                                        className="w-40 h-40 sm:w-44 sm:h-44 xl:w-48 xl:h-48 object-contain rounded-lg shadow-md"
+                                                    />
+                                                )
+                                            }
+                                            <p className="text-sm font-medium text-gray-700 mt-2 text-center break-words">
+                                                {file?.folderName}
+                                            </p>
+                                        </div>
+                                    ))}
+                                </div>
+                        }
+
+
+
+                        {previewDoc && (
+                            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70 p-4 sm:p-6">
+                                <div
+                                    ref={modalRef}
+                                    className="relative w-full max-w-4xl bg-white rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col"
+                                >
+                                    {/* Close Button */}
+                                    <button
+                                        onClick={closePreview}
+                                        className="absolute top-3 right-5 text-3xl text-gray-600 hover:text-red-600 transition z-10"
+                                        aria-label="Close preview"
+                                    >
+                                        &times;
+                                    </button>
+
+                                    {/* Content Area */}
+                                    <div className="p-4 sm:p-6 w-[90%] h-[90%] max-w-[90%] max-h-[90%] self-center overflow-y-auto custom-scrollbar flex-grow">
+                                        <div className="flex mt-4 flex-col items-center justify-center space-y-6">
+                                            {previewDoc?.mimeType.startsWith('image/') ? (
+                                                <img
+                                                    src={previewDoc.url}
+                                                    alt={previewDoc.name}
+                                                    className="w-full max-h-[60vh] object-contain rounded-lg border"
+                                                />
+                                            ) : previewDoc?.mimeType === 'application/pdf' ? (
+                                                <iframe
+                                                    src={previewDoc.url}
+                                                    title={previewDoc.name}
+                                                    className="w-full h-[60vh] border rounded-lg"
+                                                />
+                                            ) : (
+                                                <p className="text-gray-600 text-lg text-center mt-6">
+                                                    This file type cannot be previewed.
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* Download Button */}
+                                    <div className="p-4 flex justify-center">
+                                        <a
+                                            href={previewDoc.url}
+                                            download={previewDoc.name}
+                                            className="px-6 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold rounded-lg shadow hover:from-green-600 hover:to-green-700 transition"
+                                        >
+                                            Download
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
 
                     </>
                 }
 
-                {
+                {/* {
                     activeTab === "reports" &&
                     <>
                         <div className="flex-1 min-w-0 bg-white shadow-2xl rounded-2xl overflow-hidden">
@@ -554,7 +761,7 @@ const UserDashboard: React.FC = () => {
                         </div>
                         <h1 className="text-lg text-center font-semibold text-gray-700 px-6 py-4 border-b">comming soon...</h1>
                     </>
-                }
+                } */}
 
                 {
                     isCreateModelOpen && (
@@ -589,10 +796,19 @@ const UserDashboard: React.FC = () => {
                                                 onChange={handleChange}
                                                 className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500"
                                             >
-                                                <option value="">Select type</option>
-                                                <option value="pdf">PDF</option>
-                                                <option value="image">Image</option>
-                                                <option value="doc">DOC</option>
+                                                <option value="">Select document type</option>
+                                                <option value="uid">Aadhaar Card</option>
+                                                <option value="pan">PAN Card</option>
+                                                <option value="passport">Passport</option>
+                                                <option value="voter_id">Voter ID</option>
+                                                <option value="driving_license">Driving License</option>
+                                                <option value="ration_card">Ration Card</option>
+                                                <option value="birth_certificate">Birth Certificate</option>
+                                                <option value="income_certificate">Income Certificate</option>
+                                                <option value="caste_certificate">Caste Certificate</option>
+                                                <option value="residence_proof">Residence Proof</option>
+                                                <option value="electricity_bill">Electricity Bill</option>
+                                                <option value="bank_passbook">Bank Passbook</option>
                                             </select>
                                         </div>
 
@@ -717,20 +933,21 @@ const UserDashboard: React.FC = () => {
 const StatCard: React.FC<{
     label: string;
     value: number;
-    color: "blue" | "green" | "red" | "purple";
+    color: "blue" | "green" | "red" | "purple" | "yellow";
     onClick?: () => void;
 }> = ({ label, value, color, onClick }) => {
     const baseColor = {
         blue: "text-blue-600 bg-blue-100",
         green: "text-green-600 bg-green-100",
         red: "text-red-600 bg-red-100",
+        yellow: "text-yellow-600 bg-yellow-100",
         purple: "text-purple-600 bg-purple-100",
     }[color];
 
     return (
         <div
             onClick={onClick}
-            className={`rounded-2xl shadow-md p-8 hover:shadow-lg transition ${onClick ? "hover:bg-opacity-90" : ""
+            className={`rounded-2xl shadow-md h-52 w-full px-6 py-4 hover:shadow-lg flex flex-col items-center justify-center transition ${onClick ? "hover:bg-opacity-90" : ""
                 } ${baseColor}`}
         >
             <h3 className="text-lg font-semibold">{label}</h3>

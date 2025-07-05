@@ -47,12 +47,9 @@ const SuperAdminDashboard: React.FC = () => {
   const [modalType, setModalType] = useState<"approved" | "rejected" | null>(null);
   const modalRef = useRef<HTMLDivElement>(null);
   const modalRef2 = useRef<HTMLDivElement>(null);
-  const [activeTab, setActiveTab] = useState("dashboard");
+  const [activeTab, setActiveTab] = useState("Dashboard");
   const [isCreateModelOpen, setIsCreateModelOpen] = useState(false);
- const [dataToSend,setdataToSend] = useState({
-  name: "",
-  email: "",
- })
+  const [dataToSend, setdataToSend] = useState({name: "",email: ""})
 
 
   const totalUsers = dummyAdmins.reduce((sum, admin) => sum + admin.usersManaged, 0);
@@ -97,20 +94,16 @@ const SuperAdminDashboard: React.FC = () => {
     };
   }, [isCreateModelOpen]);
 
-  const createAdminHandler = async() => {
-    console.log(dataToSend,'this is data')
+  const createAdminHandler = async () => {
     try {
-       const response = await axios.post("http://localhost:4000/api/auth/createAdmin", {
+      const response = await axios.post("http://localhost:4000/api/auth/createAdmin", {
         name: dataToSend.name,
         email: dataToSend.email,
-       });
-       if(response.status === 201){
+      });
+      if (response.status === 201) {
         setIsCreateModelOpen(false);
-        setdataToSend({
-          name: "",
-          email: "",
-        })
-       }
+        setdataToSend({name: "",email: ""})
+      }
     } catch (error) {
       console.log(error);
       return;
@@ -127,11 +120,11 @@ const SuperAdminDashboard: React.FC = () => {
           <nav className="flex flex-col gap-2">
             <button
               className={`flex items-center gap-3 px-4 py-3 rounded-xl text-base font-medium transition
-              ${activeTab === "dashboard"
+              ${activeTab === "Dashboard"
                   ? "bg-gray-700 text-white"
                   : "text-black hover:bg-gray-700 hover:text-white"
                 }`}
-              onClick={() => setActiveTab("dashboard")}
+              onClick={() => setActiveTab("Dashboard")}
             >
               <FiHome className="text-lg transition-colors duration-200" />
               Dashboard
@@ -139,11 +132,11 @@ const SuperAdminDashboard: React.FC = () => {
 
             <button
               className={`flex items-center gap-3 px-4 py-3 rounded-xl text-base font-medium transition
-              ${activeTab === "admins"
+              ${activeTab === "Admins"
                   ? "bg-gray-700 text-white"
                   : "text-black hover:bg-gray-700 hover:text-white"
                 }`}
-              onClick={() => setActiveTab("admins")}
+              onClick={() => setActiveTab("Admins")}
             >
               <FiUsers className="text-lg transition-colors duration-200" />
               Admin
@@ -151,11 +144,11 @@ const SuperAdminDashboard: React.FC = () => {
 
             <button
               className={`flex items-center gap-3 px-4 py-3 rounded-xl text-base font-medium transition
-              ${activeTab === "users"
+              ${activeTab === "Users"
                   ? "bg-gray-700 text-white"
                   : "text-black hover:bg-gray-700 hover:text-white"
                 }`}
-              onClick={() => setActiveTab("users")}
+              onClick={() => setActiveTab("Users")}
             >
               <FaUserShield className="text-lg transition-colors duration-200" />
               Users
@@ -163,11 +156,11 @@ const SuperAdminDashboard: React.FC = () => {
 
             <button
               className={`flex items-center gap-3 px-4 py-3 rounded-xl text-base font-medium transition
-              ${activeTab === "reports"
+              ${activeTab === "Reports"
                   ? "bg-gray-700 text-white"
                   : "text-black hover:bg-gray-700 hover:text-white"
                 }`}
-              onClick={() => setActiveTab("reports")}
+              onClick={() => setActiveTab("Reports")}
             >
               <FiBarChart2 className="text-lg transition-colors duration-200" />
               Reports
@@ -179,9 +172,9 @@ const SuperAdminDashboard: React.FC = () => {
       {/* Main Content */}
       <main className="flex-1 p-5 md:p-5 overflow-x-hidden">
         <div className="flex items-center justify-between mb-8">
-          <h1 className="text-3xl font-bold text-gray-800">Super Admin Dashboard</h1>
+          <h1 className="text-3xl font-bold text-gray-800">{activeTab}</h1>
           {
-            activeTab === "admins" && (
+            activeTab === "Admins" && (
               <button onClick={() => setIsCreateModelOpen(true)} className="bg-gray-700 text-white px-4 py-2 flex items-center gap-2 rounded-full text-sm font-medium transition"> + Create Admin</button>
             )
           }
@@ -189,17 +182,13 @@ const SuperAdminDashboard: React.FC = () => {
 
         {/* Overview dashboard */}
 
-        {activeTab === "dashboard" &&
+        {activeTab === "Dashboard" &&
           <>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
               <StatCard label="Total Users" value={totalUsers} color="blue" />
               <StatCard label="Total Admins" value={totalAdmins} color="purple" />
-              <StatCard label="Total Approved" value={approvedDocs.length} color="green"
-              //  onClick={() => openModal("approved")}
-              />
-              <StatCard label="Total Rejected" value={rejectedDocs.length} color="red"
-              //  onClick={() => openModal("rejected")}
-              />
+              <StatCard label="Total Approved" value={approvedDocs.length} color="green"/>
+              <StatCard label="Total Rejected" value={rejectedDocs.length} color="red"/>
             </div>
 
             <div className="flex flex-col xl:flex-row flex-wrap gap-6 min-h-[420px]">
@@ -271,7 +260,7 @@ const SuperAdminDashboard: React.FC = () => {
         }
 
         {
-          activeTab === "admins" &&
+          activeTab === "Admins" &&
           <>
             <div className="flex-1 min-w-0 bg-white shadow-2xl rounded-2xl overflow-hidden">
               <h2 className="text-lg font-semibold text-gray-700 px-6 py-4 border-b">Admins</h2>
@@ -306,7 +295,7 @@ const SuperAdminDashboard: React.FC = () => {
         }
 
         {
-          activeTab === "users" &&
+          activeTab === "Users" &&
           <>
             <div className="flex-1 min-w-0 bg-white shadow-2xl rounded-2xl overflow-hidden">
               <h2 className="text-lg font-semibold text-gray-700 px-6 py-4 border-b">Users</h2>
@@ -343,7 +332,7 @@ const SuperAdminDashboard: React.FC = () => {
         }
 
         {
-          activeTab === "reports" &&
+          activeTab === "Reports" &&
           <>
             <div className="flex-1 min-w-0 bg-white shadow-2xl rounded-2xl overflow-hidden">
               <h2 className="text-lg font-semibold text-gray-700">Reports</h2>
