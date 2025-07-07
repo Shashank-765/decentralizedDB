@@ -1,20 +1,10 @@
 import { useState, useEffect, useRef } from "react";
-import { ethers } from "ethers";
-import { useNavigate } from "react-router-dom";
 import config from "../../config.json";
 import axios from "axios";
-import CryptoJS from "crypto-js";
 import editimage from "../assets/edit.png";
 
-const provider = new ethers.providers.JsonRpcProvider(config.URL_RPC);
-
 export default function UserProfile() {
-  const navigate = useNavigate();
-  const SECRET_KEY = "your-strong-secret-key";
-  const [files, setFiles] = useState<string[]>([]);
-  const [ipfsContents, setIpfsContents] = useState<any[]>([]);
   const [user, setUser] = useState<{ name: string; email: string; walletAddress: string } | null>(null);
-  const [loading, setLoading] = useState(true);
   const [editOpen, setEditOpen] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
@@ -106,7 +96,7 @@ export default function UserProfile() {
         walletAddress: parsedUser.walletAddress,
       });
 
-      axios.get(`${config.URL_BACKEND}api/auth/getuserdata?email=${parsedUser.email}`).then((res) => {
+      axios.get(`${config.URL_BACKEND}api/auth/getUserProfileData?email=${parsedUser.email}`).then((res) => {
         const data = res.data.data;
         setFormData({
           name: data.name,
@@ -120,54 +110,6 @@ export default function UserProfile() {
     }
   }, []);
 
-  useEffect(() => {
-    if (user?.walletAddress) {
-      const contract = new ethers.Contract(config.contractAddress, config.abi, provider);
-      contract.viewDocuments(user.walletAddress).then(setFiles).finally(() => setLoading(false));
-    }
-  }, [user?.walletAddress]);
-
-  const fetchContentFromIpfs = async (cid: string, filename = "InformationForm.json") => {
-    const gateways = [
-      `http://127.0.0.1:8080/ipfs/${cid}/${filename}`,
-      // `http://143.110.176.177:8080/ipfs/${cid}/${filename}`,
-    ];
-
-    for (const url of gateways) {
-      try {
-        const res = await fetch(url);
-        if (!res.ok) continue;
-
-        const encryptedText = await res.text();
-        const decryptedBytes = CryptoJS.AES.decrypt(encryptedText, SECRET_KEY);
-        const decryptedText = decryptedBytes.toString(CryptoJS.enc.Utf8);
-        return JSON.parse(decryptedText);
-      } catch {
-
-      }
-    }
-    return null;
-  };
-
-  useEffect(() => {
-    const fetchFiles = async () => {
-      setLoading(true);
-
-      const filtered = files.filter((f) => f.endsWith("/files"));
-
-      const results = await Promise.all(
-        filtered.map(async (cidPath) => {
-          const cidOnly = cidPath.replace("/files", "");
-          return await fetchContentFromIpfs(cidOnly);
-        })
-      );
-
-      setIpfsContents(results.filter(Boolean));
-      setLoading(false);
-    };
-
-    fetchFiles();
-  }, [files]);
 
   return (
     <div className="bg-gray-200 min-h-screen flex flex-col items-center p-10">
@@ -190,81 +132,6 @@ export default function UserProfile() {
           </div>
         </div>
       )}
-
-      {/* <div className="w-full max-w-7xl">
-        {loading ? (
-          <p className="text-gray-600 text-center">Loading documents...</p>
-        ) : files.length === 0 ? (
-          <p className="text-gray-500 text-center">No verified documents found.</p>
-        ) : (
-          <>
-            {files.length > 0 && (
-              <>
-                <h1 className="text-2xl font-bold text-gray-800 font-bold text-center mt-8 mb-8 text-uppercase">USER UPLOADED FILES</h1>
-                <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-                  {files
-                    .filter((file) => !file.endsWith("/files"))
-                    .map((file, index) => (
-                      <div
-                        key={index}
-                        className="bg-white p-6 rounded-xl shadow-xl flex flex-col items-center hover:scale-105 transition"
-                      >
-                        <img
-                          src={`https://ipfs.io/ipfs/${file}`}
-                          alt={`Document ${index + 1}`}
-                          className="w-40 h-40 object-cover rounded-lg shadow-md"
-                          onError={(e) =>
-                            (e.currentTarget.src = "/decentralizedDb/file-placeholder.png")
-                          }
-                        />
-                        <a
-                          onClick={() => navigate("/viewDocuments", { state: { file } })}
-                          className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition cursor-pointer"
-                        >
-                          View Document
-                        </a>
-                      </div>
-                    ))}
-
-                </div>
-              </>
-            )}
-
-            {ipfsContents.length > 0 && (
-              <>
-                <h1 className="text-2xl font-bold text-gray-800 font-bold text-center mt-8 mb-8 text-uppercase">USER INFORMATION FILES</h1>
-                <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-                  {ipfsContents.map((content, index) => (
-                    <div
-                      key={index}
-                      className="bg-white border border-gray-200 rounded-2xl shadow-lg hover:shadow-xl p-6"
-                    >
-                      <h2 className="text-xl font-semibold text-indigo-600 mb-4">
-                        Document #{index + 1}
-                      </h2>
-
-                      {Array.isArray(content) ? (
-                        <div className="space-y-3">
-                          {content.map((field, idx) => (
-                            <div key={idx} className="text-sm text-gray-700">
-                              <span className="font-medium text-gray-900 capitalize">
-                                {field.key}:
-                              </span>{" "}
-                              <span>{field.value}</span>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="text-sm text-red-500">Invalid data format</p>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </>
-            )}
-          </>
-        )}
-      </div> */}
 
       {editOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50">

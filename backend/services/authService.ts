@@ -63,13 +63,15 @@ export const loginUser = async (email: string, walletAddress: string, name: stri
     return user;
 };
 export const userList = async (): Promise<IUser[]> => {
-    const users = await User.find({ userType: "User" });
-
-    if (users.length === 0) {
-        throw new Error("No users found");
+    const users = await DocumentCidModel.find({});
+    if(!users){
+        return [];
     }
+    const allUserIds = users.map(user => user.userId);
+    const uniqueUserIds = [...new Set(allUserIds)];
 
-    return users;
+    const userData = await User.find({ _id: { $in: uniqueUserIds } });
+    return userData;
 };
 export const blockUser = async (id: string): Promise<IUser> => {
     const user = await User.findById(id);
@@ -105,6 +107,14 @@ export const addDocument = async (userId: string, cid: string, type: string, wal
     } catch (error: any) {
         throw new Error(error.message);
     }
+};
+export const getAllUsers = async (): Promise<IUser[]> => {
+    const users = await User.find({userType:"User"});
+    return users;
+};
+export const getAllAdmins = async (): Promise<IUser[]> => {
+    const admins = await User.find({ userType: "Admin" });
+    return admins;
 };
 
 

@@ -71,5 +71,21 @@ export const addDocument = async (req: Request, res: Response) => {
         res.status(400).json({ error: error.message });
     }
 };
+export const getAllUsers = async (req: Request, res: Response) => {
+    try {
+        const user = await authService.getAllUsers();
+        res.status(200).json({ message: "User Fetched successful", user });
+    } catch (error: any) {
+        res.status(400).json({ error: error.message });
+    }
+};
+export const getAllAdmins = async (req: Request, res: Response) => {
+    try {
+        const admin = await authService.getAllAdmins();
+        res.status(200).json({ message: "Admin Fetched successful", admin });
+    } catch (error: any) {
+        res.status(400).json({ error: error.message });
+    }
+};
 
 

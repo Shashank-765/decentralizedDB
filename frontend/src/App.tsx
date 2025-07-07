@@ -1,7 +1,6 @@
-import { HashRouter as Router, Routes, Route,useLocation } from 'react-router-dom';
-import { useEffect, useState } from 'react';
+import { HashRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import { useEffect } from 'react';
 
-import type { Book } from './types';
 import Homepage from './pages/homepage';
 import Header from './pages/header';
 import Footer from './pages/footer';
@@ -9,47 +8,21 @@ import { ToastContainer } from 'react-toastify';
 import AdminDashboard from './pages/adminDashboard';
 import UserProfile from './pages/profile';
 import UserDashboard from './pages/userDashboard';
-import config from "../config.json"
 import ProtectedRoute from './pages/protectedRoutes';
-import RestrictToUsersOnly from './pages/RestrictedUserRoutes';
-import ViewDocuments from './pages/viewDocuments';
 import SuperAdminDashboard from './pages/superAdminDashboard';
 import NotFound from './pages/notFound'
 
 function App() {
-  const [books, setBooks] = useState<Book[]>([]);
-  const [user, setUser] = useState<any>(null);
-  useEffect(() => {
-    const userString = localStorage.getItem("user");
-    if (userString) {
-      const userObj = JSON.parse(userString);
-      setUser(userObj);
-    } else {
-      setUser(null);
-    }
-  }
-
-  , []);
-
-  useEffect(() => {
-    console.log("Fetching Books...", books);
-    const getBooks = async () => {
-      const response = await fetch(`${config.URL_BACKEND}books`);
-      const data = await response.json();
-      setBooks(data);
-    };
-    getBooks();
-  }, []);
 
   const ScrollToTop = () => {
     const location = useLocation();
-  
+
     useEffect(() => {
       window.scrollTo(0, 0);
     }, [location.pathname]);
-  
+
     return null;
-  };  
+  };
 
   useEffect(() => {
     const frames = [
@@ -90,7 +63,7 @@ function App() {
     <Router>
       <ScrollToTop />
       <ToastContainer position="top-right"
-        autoClose={1000}  
+        autoClose={1000}
         hideProgressBar={false}
         newestOnTop={false}
         closeOnClick
@@ -105,27 +78,23 @@ function App() {
         <Route
           path="/profile"
           element={
-            <RestrictToUsersOnly user={user}>
+            <ProtectedRoute allowedTypes={["User", "Admin", "SuperAdmin"]}>
               <UserProfile />
-            </RestrictToUsersOnly>
+            </ProtectedRoute>
           }
         />
         <Route
           path="/superadmin"
           element={
-            // <ProtectedRoute user={user} allowedTypes={["SuperAdmin"]}>
+            <ProtectedRoute allowedTypes={["SuperAdmin"]}>
               <SuperAdminDashboard />
-            // </ProtectedRoute>
+            </ProtectedRoute>
           }
-        />
-        <Route
-          path='/viewdocuments'
-          element={<ViewDocuments />}
         />
         <Route
           path="/adminDashboard"
           element={
-            <ProtectedRoute user={user} allowedTypes={["Admin", "User"]}>
+            <ProtectedRoute allowedTypes={["Admin", "SuperAdmin"]}>
               <AdminDashboard />
             </ProtectedRoute>
           }
@@ -133,7 +102,7 @@ function App() {
         <Route
           path="/userDashboard"
           element={
-            <ProtectedRoute user={user} allowedTypes={["User", "Admin"]}>
+            <ProtectedRoute allowedTypes={["User", "Admin", "SuperAdmin"]}>
               <UserDashboard />
             </ProtectedRoute>
           }

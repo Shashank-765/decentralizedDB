@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from "react";
-import { FaEye, FaCheckCircle, FaTimesCircle, FaUsers, FaChartPie,FaBan } from "react-icons/fa";
+import { FaEye, FaCheckCircle, FaTimesCircle, FaUsers, FaChartPie, FaBan } from "react-icons/fa";
 import axios from "axios";
 import { ethers } from "ethers";
 import config from "../../config.json";
+import CircularLoader from "../CircularLoader/CircularLoader";
 import ToastMessage from "./toastmessage";
 import blockIcon from '../assets/prohibition.png';
 import unblock from '../assets/unlock.png';
@@ -42,8 +43,8 @@ export default function UserDashboard() {
   const adminLocalData = location.state?.admin;
   const localUserData = JSON.parse(localStorage.getItem("user") || "{}");
   const modalRef = useRef<HTMLDivElement>(null);
-  const decryptedDocs: DecryptedFile[] = [];
-  // const [ipfsContents, setIpfsContents] = useState<any[]>([]);
+  let decryptedDocs: DecryptedFile[] = [];
+  const [circularLoading, setCircularLoading] = useState(false);
 
   useEffect(() => {
     const handleOutsideClick = (event: MouseEvent) => {
@@ -61,7 +62,8 @@ export default function UserDashboard() {
 
   const fetchUsers = async () => {
     try {
-      const response = await axios.post(`${config.URL_BACKEND}api/auth/userList`);
+      setCircularLoading(true);
+      const response = await axios.get(`${config.URL_BACKEND}api/auth/userList`);
       const userData = [];
       for (let i = 0; i < response.data.user.length; i++) {
         const walletAddress = response.data.user[i].walletAddress;
@@ -108,69 +110,62 @@ export default function UserDashboard() {
           }
         };
 
+        try {
+          const results = await Promise.all(
+            documents.map(async (file: any, index: number) => {
+              let isapproved = file[1];
+              const content = await fetchContentFromIpfs(file[0]);
+              return {
+                ...content,
+                index,
+                approved: isapproved
+              }
+            })
+          );
 
-         
-          try {
-            const results = await Promise.all(
-              documents.map(async (file: any,index: number) => {
-                 let isapproved = file[1];
-                const content = await fetchContentFromIpfs(file[0]);
-                return {
-                  ...content,
-                  index,
-                  approved:isapproved
-                }
-              })
-            );
+          for (const file of results) {
+            if (!file?.folderCid) continue;
+            try {
+              for await (const entry of ipfs.ls(file?.folderCid)) {
+                if (entry.type === 'file') {
+                  const fileCid = entry.cid;
+                  const fileName = entry.name;
 
-            for (const file of results) {
-              const folderCid = file?.folderCid;
-              const folderName = file?.name;
-              const type = file?.type;
-              if (!folderCid) continue;
+                  const chunks: Uint8Array[] = [];
+                  for await (const chunk of ipfs.cat(fileCid)) {
+                    chunks.push(chunk);
+                  }
 
-              try {
-                for await (const entry of ipfs.ls(folderCid)) {
-                  if (entry.type === 'file') {
-                    const fileCid = entry.cid;
-                    const fileName = entry.name;
+                  const totalSize = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
+                  const combined = new Uint8Array(totalSize);
+                  let offset = 0;
+                  for (const chunk of chunks) {
+                    combined.set(chunk, offset);
+                    offset += chunk.length;
+                  }
 
-                    const chunks: Uint8Array[] = [];
-                    for await (const chunk of ipfs.cat(fileCid)) {
-                      chunks.push(chunk);
-                    }
-
-                    const totalSize = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
-                    const combined = new Uint8Array(totalSize);
-                    let offset = 0;
-                    for (const chunk of chunks) {
-                      combined.set(chunk, offset);
-                      offset += chunk.length;
-                    }
-
-                    const encryptedText = new TextDecoder().decode(combined);
-                    const { blob, mimeType } = decryptFile(encryptedText);
-                    if (blob) {
-                        decryptedDocs.push({
-                        documentName: fileName.replace('.enc', ''),
-                        url: URL.createObjectURL(blob),
-                        mimeType,
-                        index: file.index,
-                        approved:file.approved,
-                        folderName: folderName,
-                        type: type,
-                      });
-                    }
+                  const encryptedText = new TextDecoder().decode(combined);
+                  const { blob, mimeType } = decryptFile(encryptedText);
+                  if (blob) {
+                    decryptedDocs.push({
+                      documentName: fileName.replace('.enc', ''),
+                      url: URL.createObjectURL(blob),
+                      mimeType,
+                      index: file.index,
+                      approved: file.approved,
+                      folderName: file?.name,
+                      type: file?.type,
+                    });
                   }
                 }
-              } catch (e) {
-                console.error(`Failed to decrypt CID ${folderCid}:`, e);
               }
+            } catch (e) {
+              console.error(`Failed to decrypt CID ${file?.folderCid}:`, e);
             }
-              // setIpfsContents(decryptedDocs); 
-          } catch (err) {
-            console.error('Overall IPFS file fetch error:', err);
           }
+        } catch (err) {
+          console.error('Overall IPFS file fetch error:', err);
+        }
 
 
         let userFiles = documents.map((doc: any, index: number) => ({
@@ -189,7 +184,9 @@ export default function UserDashboard() {
           fileLinks: decryptedDocs,
           status: allApproved ? "Approved" : "Pending",
         });
+        decryptedDocs = [];
       }
+      setCircularLoading(false);
       setUsers(userData);
     } catch (error) {
       console.error("Error fetching users:", error);
@@ -200,8 +197,6 @@ export default function UserDashboard() {
     fetchUsers();
   }, []);
 
-
-  console.log(users, 'users')
   const approve = async (walletAddress: string, index: number) => {
     try {
       const tx = await contract.verifyDocument(walletAddress, index);
@@ -239,10 +234,11 @@ export default function UserDashboard() {
   const totalApproved = users.reduce((count, user) => {
     return count + user.fileLinks.filter((file: any) => file.approved).length;
   }, 0);
-    const totalRejected = users.reduce((count, user) => {
-    return count + user.fileLinks.filter((file: any) => !file.approved).length;
-  }, 0);
-    const totalPending = users.reduce((count, user) => {
+  //   const totalRejected = users.reduce((count, user) => {
+  //   return count + user.fileLinks.filter((file: any) => !file.approved).length;
+  // }, 0);
+  const totalRejected = 0;
+  const totalPending = users.reduce((count, user) => {
     return count + user.fileLinks.filter((file: any) => !file.approved).length;
   }, 0);
 
@@ -325,80 +321,91 @@ export default function UserDashboard() {
               <StatCard label="Documents Pending" value={totalPending} color="yellow" />
 
             </div>
+            {
 
-            <div className="overflow-x-auto rounded-xl bg-white shadow">
-              <table className="w-full table-auto border-collapse text-sm">
-                <thead className="bg-gray-100 text-gray-800 text-lg font-semibold">
-                  <tr>
-                    <th className="py-4 px-6 text-left">User Name</th>
-                    <th className="py-4 px-6 text-left">Email</th>
-                    <th className="py-4 px-6 text-center">Folders</th>
-                    <th className="py-4 px-6 text-left">Preview</th>
-                    <th className="py-4 px-6 text-center">Status</th>
-                    <th className="py-4 px-6 text-center">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="text-gray-700">
-                  {currentUsers.map((user) => (
-                    <tr key={user.id} className="border-b border-gray-200 hover:bg-gray-50 transition">
-                      <td className="py-4 px-6">{user.name}</td>
-                      <td className="py-4 px-6">{user.email}</td>
-                      <td className="py-4 px-6 text-center">{user.files}</td>
-                      <td className="py-4 px-6 text-center">
-                        {user.fileLinks.length > 0 ? (
-                          <button onClick={() => openModal(user)} className="text-blue-600 hover:text-blue-800 font-medium flex justify-center items-center gap-1">
-                            <FaEye /> View Files
-                          </button>
-                        ) : 'No Files'}
-                      </td>
-                      <td className="py-4 px-6 text-center">
-                        {user.status === "Approved" ? (
-                          <span className="text-green-600 flex items-center justify-center gap-1">
-                            {user.fileLinks.length > 0 ? <> <FaCheckCircle /> Approved</> : 'Not Yet'}
-                          </span>
-                        ) : (
-                          <span className="text-yellow-500 flex items-center justify-center gap-1">
-                            <FaTimesCircle /> Pending
-                          </span>
-                        )}
-                      </td>
-                      <td className="py-4 px-6 text-center flex gap-2 justify-center">
-                        {user.isBlocked ? (
-                          <button onClick={() => blockUser(user.id)} className="text-red-600"><img src={blockIcon} alt="" className="w-5 h-5 cursor-pointer" /></button>
-                        ) : (
-                          <button onClick={() => unblockUser(user.id)} className="text-green-600"><img src={unblock} alt="" className="w-5 h-5 cursor-pointer" /></button>
-                        )}
-                        <FaEye onClick={() => navigateUserdahsboard(user)} className="w-5 h-5 cursor-pointer" />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+              circularLoading ? <div className="flex justify-center items-center mt-50 h-80">
+                <CircularLoader size={30} />
+              </div> :
+                <>
+                  <div className="overflow-x-auto rounded-xl bg-white shadow">
+                    <table className="w-full table-auto border-collapse text-sm">
+                      <thead className="bg-gray-100 text-gray-800 text-lg font-semibold">
+                        <tr>
+                          <th className="py-4 px-6 text-left">User Name</th>
+                          <th className="py-4 px-6 text-left">Email</th>
+                          <th className="py-4 px-6 text-center">Documents</th>
+                          <th className="py-4 px-6 text-left">Preview</th>
+                          <th className="py-4 px-6 text-center">Status</th>
+                          <th className="py-4 px-6 text-center">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody className="text-gray-700">
+                        {currentUsers.map((user) => (
+                          <tr key={user.id} className="border-b border-gray-200 hover:bg-gray-50 transition">
+                            <td className="py-4 px-6">{user.name}</td>
+                            <td className="py-4 px-6">{user.email}</td>
+                            <td className="py-4 px-6 text-center">{user.files}</td>
+                            <td className="py-4 px-6 text-center">
+                              {user.fileLinks.length > 0 ? (
+                                <button onClick={() => openModal(user)} className="text-blue-600 hover:text-blue-800 font-medium flex justify-center items-center gap-1">
+                                  <FaEye /> View Files
+                                </button>
+                              ) : 'No Files'}
+                            </td>
+                            <td className="py-4 px-6 text-center">
+                              {user.status === "Approved" ? (
+                                <span className="text-green-600 flex items-center justify-center gap-1">
+                                  {user.fileLinks.length > 0 ? <> <FaCheckCircle /> Approved</> : 'Not Yet'}
+                                </span>
+                              ) : (
+                                <span className="text-yellow-500 flex items-center justify-center gap-1">
+                                  <FaTimesCircle /> Pending
+                                </span>
+                              )}
+                            </td>
+                            <td className="py-4 px-6 text-center flex gap-2 justify-center">
+                              {user.isBlocked ? (
+                                <button onClick={() => blockUser(user.id)} className="text-red-600"><img src={blockIcon} alt="" className="w-5 h-5 cursor-pointer" /></button>
+                              ) : (
+                                <button onClick={() => unblockUser(user.id)} className="text-green-600"><img src={unblock} alt="" className="w-5 h-5 cursor-pointer" /></button>
+                              )}
+                              <FaEye onClick={() => navigateUserdahsboard(user)} className="w-5 h-5 cursor-pointer" />
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
 
-            <div className="flex justify-between items-center mt-6 px-4">
-              <button
-                onClick={prevPage}
-                disabled={currentPage === 1}
-                className={`px-5 py-2 rounded-xl font-semibold text-white transition ${currentPage === 1 ? "bg-gray-400 cursor-not-allowed" : "bg-blue-500 hover:bg-blue-600"
-                  }`}
-              >
-                Previous
-              </button>
-              <span className="text-gray-600 text-lg font-medium">
-                Page {currentPage} of {Math.ceil(users.length / usersPerPage)}
-              </span>
-              <button
-                onClick={nextPage}
-                disabled={currentPage === Math.ceil(users.length / usersPerPage)}
-                className={`px-5 py-2 rounded-xl font-semibold text-white transition ${currentPage === Math.ceil(users.length / usersPerPage)
-                  ? "bg-gray-400 cursor-not-allowed"
-                  : "bg-blue-500 hover:bg-blue-600"
-                  }`}
-              >
-                Next
-              </button>
-            </div>
+                  <div className="flex justify-between items-center mt-6 px-4">
+                    <button
+                      onClick={prevPage}
+                      disabled={currentPage === 1}
+                      className={`px-5 py-2 rounded-xl font-semibold text-white transition ${currentPage === 1 ? "bg-gray-400 cursor-not-allowed" : "bg-blue-500 hover:bg-blue-600"
+                        }`}
+                    >
+                      Previous
+                    </button>
+                    <span className="text-gray-600 text-lg font-medium">
+                      Page {currentPage} of {Math.ceil(users.length / usersPerPage)}
+                    </span>
+                    <button
+                      onClick={nextPage}
+                      disabled={currentPage === Math.ceil(users.length / usersPerPage)}
+                      className={`px-5 py-2 rounded-xl font-semibold text-white transition ${currentPage === Math.ceil(users.length / usersPerPage)
+                        ? "bg-gray-400 cursor-not-allowed"
+                        : "bg-blue-500 hover:bg-blue-600"
+                        }`}
+                    >
+                      Next
+                    </button>
+                  </div>
+
+                </>
+
+            }
+
+
 
             {showModal && (
               <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center px-4">
@@ -421,15 +428,15 @@ export default function UserDashboard() {
                         <p className="mt-3 text-sm font-medium text-gray-700">File {index + 1}</p>
                         {!file.approved ? (
                           <>
-                          <div className="flex gap-2">
-                          <button onClick={() => selectedUser && approve(selectedUser, file.index)} className="mt-2 px-4 py-1 bg-green-500 text-white rounded-lg hover:bg-green-600 flex items-center gap-1">
-                            <FaCheckCircle className="w-5 h-5" /> Approve
-                          </button>
-                          <button className="mt-2 px-4 py-1 bg-red-500 text-white rounded-lg hover:bg-green-600 flex items-center gap-1">
-                          <FaBan className="w-5 h-5" /> Reject
-                        </button>
-                          </div>
-                          
+                            <div className="flex gap-2">
+                              <button onClick={() => selectedUser && approve(selectedUser, file.index)} className="mt-2 px-4 py-1 bg-green-500 text-white rounded-lg hover:bg-green-600 flex items-center gap-1">
+                                <FaCheckCircle className="w-5 h-5" /> Approve
+                              </button>
+                              <button className="mt-2 px-4 py-1 bg-red-500 text-white rounded-lg hover:bg-green-600 flex items-center gap-1">
+                                <FaBan className="w-5 h-5" /> Reject
+                              </button>
+                            </div>
+
                           </>
                         ) : (
                           <span className="mt-2 text-green-600 flex items-center gap-1">

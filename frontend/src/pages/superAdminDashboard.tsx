@@ -15,7 +15,7 @@ type Admin = {
   id: number;
   name: string;
   email: string;
-  usersManaged: number;
+  userType: string;
 };
 
 type User = {
@@ -23,18 +23,8 @@ type User = {
   name: string;
   email: string;
   role: string;
-  status: string;
+  userType: string;
 };
-
-const dummyAdmins: Admin[] = [
-  { id: 1, name: "Admin One", email: "admin1@example.com", usersManaged: 10 },
-  { id: 2, name: "Admin Two", email: "admin2@example.com", usersManaged: 7 },
-];
-
-const dummyUsers: User[] = [
-  { id: 1, name: "User One", email: "user1@example.com", role: "User", status: "Active" },
-  { id: 2, name: "User Two", email: "user2@example.com", role: "User", status: "Active" },
-];
 
 const dummyDocuments: Document[] = [
   { id: 1, name: "User A - Doc 1", status: "approved", adminName: "Admin One" },
@@ -49,11 +39,13 @@ const SuperAdminDashboard: React.FC = () => {
   const modalRef2 = useRef<HTMLDivElement>(null);
   const [activeTab, setActiveTab] = useState("Dashboard");
   const [isCreateModelOpen, setIsCreateModelOpen] = useState(false);
-  const [dataToSend, setdataToSend] = useState({name: "",email: ""})
+  const [dataToSend, setdataToSend] = useState({ name: "", email: "" })
+  const [allUsers, setAllUsers] = useState<User[]>([]);
+  const [allAdmins, setAllAdmins] = useState<Admin[]>([]);
 
 
-  const totalUsers = dummyAdmins.reduce((sum, admin) => sum + admin.usersManaged, 0);
-  const totalAdmins = dummyAdmins.length;
+  const totalUsers = allUsers.length;
+  const totalAdmins = allAdmins.length;
   const approvedDocs = dummyDocuments.filter((doc) => doc.status === "approved");
   const rejectedDocs = dummyDocuments.filter((doc) => doc.status === "rejected");
   const navigate = useNavigate();
@@ -102,7 +94,7 @@ const SuperAdminDashboard: React.FC = () => {
       });
       if (response.status === 201) {
         setIsCreateModelOpen(false);
-        setdataToSend({name: "",email: ""})
+        setdataToSend({ name: "", email: "" })
       }
     } catch (error) {
       console.log(error);
@@ -110,6 +102,36 @@ const SuperAdminDashboard: React.FC = () => {
     }
   };
 
+  const fetchAllUser = async () => {
+
+    try {
+      const response = await axios.get("http://localhost:4000/api/auth/getAllUsers");
+      if (response.status === 200) {
+        setAllUsers(response.data.user);
+      }
+    } catch (error) {
+      console.log(error);
+      return;
+    }
+  }
+
+  const fetchAllAdmins = async () => {
+
+    try {
+      const response = await axios.get("http://localhost:4000/api/auth/getAllAdmins");
+      if (response.status === 200) {
+        setAllAdmins(response.data.admin);
+      }
+    } catch (error) {
+      console.log(error);
+      return;
+    }
+  }
+
+  useEffect(() => {
+    fetchAllUser();
+    fetchAllAdmins();
+  }, [])
 
   return (
     <div className="min-h-screen overflow-x-hidden rounded-3xl bg-white mx-4 flex">
@@ -187,8 +209,8 @@ const SuperAdminDashboard: React.FC = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
               <StatCard label="Total Users" value={totalUsers} color="blue" />
               <StatCard label="Total Admins" value={totalAdmins} color="purple" />
-              <StatCard label="Total Approved" value={approvedDocs.length} color="green"/>
-              <StatCard label="Total Rejected" value={rejectedDocs.length} color="red"/>
+              <StatCard label="Total Approved" value={approvedDocs.length} color="green" />
+              <StatCard label="Total Rejected" value={rejectedDocs.length} color="red" />
             </div>
 
             <div className="flex flex-col xl:flex-row flex-wrap gap-6 min-h-[420px]">
@@ -201,16 +223,16 @@ const SuperAdminDashboard: React.FC = () => {
                       <tr>
                         <th className="py-4 px-6 text-left">Name</th>
                         <th className="py-4 px-6 text-left">Email</th>
-                        <th className="py-4 px-6 text-left">Users</th>
+                        <th className="py-4 px-6 text-left">Status</th>
                         <th className="py-4 px-6 text-center">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="text-gray-800">
-                      {dummyAdmins.map((admin) => (
-                        <tr key={admin.id} className="border-t hover:bg-gray-50 transition">
+                      {allAdmins?.map((admin, index) => (
+                        <tr key={index} className="border-t hover:bg-gray-50 transition">
                           <td className="py-4 px-6 text-base">{admin.name}</td>
                           <td className="py-4 px-6 text-base">{admin.email}</td>
-                          <td className="py-4 px-6 text-base">{admin.usersManaged}</td>
+                          <td className="py-4 px-6 text-base">{admin.userType}</td>
                           <td className="py-4 px-6 text-base align-center">
                             {/* <button className="text-white px-2 py-1 rounded-full text-sm font-medium transition"> */}
                             <FaEye onClick={() => navigateToAdmin(admin)} className="w-5 h-5 mx-auto cursor-pointer" />
@@ -232,18 +254,16 @@ const SuperAdminDashboard: React.FC = () => {
                       <tr>
                         <th className="py-4 px-6 text-left">Name</th>
                         <th className="py-4 px-6 text-left">Email</th>
-                        <th className="py-4 px-6 text-left">Role</th>
                         <th className="py-4 px-6 text-left">Status</th>
                         <th className="py-4 px-6 text-center">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="text-gray-800">
-                      {dummyUsers.map((user) => (
-                        <tr key={user.id} className="border-t hover:bg-gray-50 transition">
+                      {allUsers?.map((user, index) => (
+                        <tr key={index} className="border-t hover:bg-gray-50 transition">
                           <td className="py-4 px-6 text-base">{user.name}</td>
                           <td className="py-4 px-6 text-base">{user.email}</td>
-                          <td className="py-4 px-6 text-base">{user.role}</td>
-                          <td className="py-4 px-6 text-base">{user.status}</td>
+                          <td className="py-4 px-6 text-base">{user.userType}</td>
                           <td className="py-4 px-6 text-base">
                             {/* <button className="bg-indigo-500 hover:bg-indigo-600 text-white px-2 py-1 rounded-full text-sm font-medium transition"> */}
                             <FaEye onClick={() => navigateToUser(user)} className="w-5 h-5 mx-auto cursor-pointer" />
@@ -270,16 +290,16 @@ const SuperAdminDashboard: React.FC = () => {
                     <tr>
                       <th className="py-4 px-6 text-left">Name</th>
                       <th className="py-4 px-6 text-left">Email</th>
-                      <th className="py-4 px-6 text-left">Users</th>
+                      <th className="py-4 px-6 text-left">Status</th>
                       <th className="py-4 px-6 text-center">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="text-gray-800">
-                    {dummyAdmins.map((admin) => (
-                      <tr key={admin.id} className="border-t hover:bg-gray-50 transition">
+                    {allAdmins.map((admin, index) => (
+                      <tr key={index} className="border-t hover:bg-gray-50 transition">
                         <td className="py-4 px-6 text-base">{admin.name}</td>
                         <td className="py-4 px-6 text-base">{admin.email}</td>
-                        <td className="py-4 px-6 text-base">{admin.usersManaged}</td>
+                        <td className="py-4 px-6 text-base">{admin.userType}</td>
                         <td className="py-4 px-6">
                           {/* <button className="bg-indigo-500 hover:bg-indigo-600 text-white px-2 py-1 rounded-full text-sm font-medium transition"> */}
                           <FaEye onClick={() => navigateToAdmin(admin)} className="w-5 h-5 mx-auto cursor-pointer" />
@@ -311,12 +331,12 @@ const SuperAdminDashboard: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody className="text-gray-800">
-                    {dummyUsers.map((user) => (
-                      <tr key={user.id} className="border-t hover:bg-gray-50 transition">
+                    {allUsers.map((user, index) => (
+                      <tr key={index} className="border-t hover:bg-gray-50 transition">
                         <td className="py-4 px-6 text-base">{user.name}</td>
                         <td className="py-4 px-6 text-base">{user.email}</td>
-                        <td className="py-4 px-6 text-base">{user.role}</td>
-                        <td className="py-4 px-6 text-base">{user.status}</td>
+                        <td className="py-4 px-6 text-base">{user.userType}</td>
+                        <td className="py-4 px-6 text-base">{user.userType}</td>
                         <td className="py-4 px-6">
                           {/* <button className="bg-indigo-500 hover:bg-indigo-600 text-white px-2 py-1 rounded-full text-sm font-medium transition"> */}
                           <FaEye onClick={() => navigateToUser(user)} className="w-5 h-5 mx-auto cursor-pointer" />

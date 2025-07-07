@@ -127,6 +127,7 @@ function Header() {
   const disconnectWallet = async () => {
     await disconnect();
     logout();
+    setIsOpen(false);
     navigate("/")
   }
 
@@ -179,7 +180,6 @@ function Header() {
             />
           </div>
 
-          {/* Desktop Menu */}
           <ul className={`hidden md:flex space-x-6`}>
             <li><Link to="/home" className="text-gray-700 hover:text-gray-800 text-lg w-32 h-12 flex items-center justify-center rounded-full bg-white shadow-md hover:shadow-lg transition">Home</Link></li>
 
@@ -190,25 +190,37 @@ function Header() {
                     className="relative"
                     onClick={() => setPopupOpen()}
                   >
-                          <Link
-                    to="/userDashboard"
-                    className="text-gray-700 hover:text-gray-800 text-lg w-32 h-12 flex items-center justify-center rounded-full bg-white shadow-md hover:shadow-lg transition"
-                  >
-                    Dashboard
-                  </Link>
+                    <Link
+                      to="/userDashboard"
+                      className="text-gray-700 hover:text-gray-800 text-lg w-32 h-12 flex items-center justify-center rounded-full bg-white shadow-md hover:shadow-lg transition"
+                    >
+                      Dashboard
+                    </Link>
                   </li>
                 </>
-              ) : (
-                <li>
-                  <Link
-                    to="/adminDashboard"
-                    className="text-gray-700 hover:text-gray-800 text-lg w-32 h-12 flex items-center justify-center rounded-full bg-white shadow-md hover:shadow-lg transition"
-                  >
-                    Dashboard
-                  </Link>
-                </li>
-              )
-            ) : null} {/* Renders nothing if user is null */}
+              ) :
+
+                user.userType === "Admin" ? (
+                  <li>
+                    <Link
+                      to="/adminDashboard"
+                      className="text-gray-700 hover:text-gray-800 text-lg w-32 h-12 flex items-center justify-center rounded-full bg-white shadow-md hover:shadow-lg transition"
+                    >
+                      Dashboard
+                    </Link>
+                  </li>
+                ) :
+                  (
+                    <li>
+                      <Link
+                        to="/superadmin"
+                        className="text-gray-700 hover:text-gray-800 text-lg w-32 h-12 flex items-center justify-center rounded-full bg-white shadow-md hover:shadow-lg transition"
+                      >
+                        Dashboard
+                      </Link>
+                    </li>
+                  )
+            ) : null}
 
 
             <li>
@@ -398,20 +410,9 @@ function Header() {
       setUser(userData);
     };
     const logout = async () => {
-      try {
-        // 1. Call backend to clear session cookies
-        await axios.get(`${config.URL_BACKEND}api/auth/logout`, {
-          withCredentials: true, // makes sure cookies are sent
-        });
-        // 2. Clear frontend data
         localStorage.removeItem("user");
         setUser(null);
-        window.location.reload();
         ToastMessage("Logged out successfully", "success", "");
-      } catch (error) {
-        console.error("Logout failed", error);
-        ToastMessage("Logout failed", "error", "");
-      }
     };
 
 

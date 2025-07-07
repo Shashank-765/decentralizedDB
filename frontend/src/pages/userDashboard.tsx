@@ -10,7 +10,9 @@ import CryptoJS from 'crypto-js';
 import pdficon from '../assets/pdficon.png'
 import fileIcons from '../assets/fileIcons.png'
 import { useLocation } from "react-router-dom";
-
+const backendUrl = import.meta.env.VITE_BACKEND_URL;
+const ENCRYPTION_KEY = 'your-strong-secret-key';
+import axios from 'axios';
 interface DecryptedFile {
     url: string;
     name: string;
@@ -18,25 +20,6 @@ interface DecryptedFile {
     folderName: string;
     type: string;
 }
-
-const ENCRYPTION_KEY = 'your-strong-secret-key';
-import axios from 'axios';
-const backendUrl = import.meta.env.VITE_BACKEND_URL;
-console.log(backendUrl, 'backendUrl')
-type Document = {
-    id: number;
-    name: string;
-    status: "approved" | "rejected" | "pending";
-    adminName: string;
-};
-
-const dummyDocuments: Document[] = [
-    { id: 1, name: "User A - Doc 1", status: "approved", adminName: "Admin One" },
-    { id: 2, name: "User B - Doc 2", status: "rejected", adminName: "Admin Two" },
-    { id: 3, name: "User C - Doc 3", status: "approved", adminName: "Admin Two" },
-    { id: 4, name: "User D - Doc 4", status: "rejected", adminName: "Admin One" },
-    { id: 5, name: "User E - Doc 5", status: "pending", adminName: "Admin One" },
-];
 
 let provider = new ethers.providers.JsonRpcProvider(config.URL_RPC)
 // const contract = new ethers.Contract(config.contractAddress, config.abi, provider);
@@ -58,9 +41,11 @@ const UserDashboard: React.FC = () => {
     const [uploadProgress, setUploadProgress] = useState<number>(0);
     const [isCircularLoading, setIsCirculrLoading] = useState(false)
     const [loading, setLoading] = useState(false);
-    const approvedDocs = dummyDocuments.filter((doc) => doc.status === "approved");
-    const rejectedDocs = dummyDocuments.filter((doc) => doc.status === "rejected");
-    const pendingDocs = dummyDocuments.filter((doc) => doc.status === "pending");
+    // const approvedDocs = dummyDocuments.filter((doc) => doc.status === "approved");
+    // const rejectedDocs = dummyDocuments.filter((doc) => doc.status === "rejected");
+    const rejectedDocs = [];
+    // const pendingDocs = dummyDocuments.filter((doc) => doc.status === "pending");
+    const pendingDocs = [];
     const closeModal = () => setModalType(null);
     const [previewDoc, setPreviewDoc] = useState<DecryptedFile | null>(null);
 
@@ -72,7 +57,7 @@ const UserDashboard: React.FC = () => {
     });
     const location = useLocation();
     const adminUser = location.state?.user;
-    const userData = JSON.parse(localStorage.getItem("user") || "{}");
+    const userData = adminUser ? adminUser : JSON.parse(localStorage.getItem("user") || "{}");
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
@@ -289,62 +274,18 @@ const UserDashboard: React.FC = () => {
         }
         event.target.value = '';
     };
-    // const handleDrop = async (event: React.DragEvent<HTMLDivElement>) => {
-    //     event.preventDefault();
-
-    //     const items = event.dataTransfer.items;
-
-    //     if (items.length !== 1) {
-    //         ToastMessage("Please drop only one file.", "error", "");
-    //         return;
-    //     }
-    //     const droppedFiles: File[] = [];
-
-
-    //     const traverseFileTree = async (item: any, path = ""): Promise<void> => {
-    //         return new Promise((resolve) => {
-    //             if (item.isFile) {
-    //                 item.file((file: File) => {
-    //                     const fullPathFile = new File([file], path + file.name, { type: file.type });
-    //                     droppedFiles.push(fullPathFile);
-    //                     resolve();
-    //                 });
-    //             }  else if (item.isDirectory) {
-    //                 ToastMessage("Folders are not allowed. Please drop only a file.", "error", "");
-    //                 resolve();
-    //             }
-    //         });
-    //     };
-
-    //     const promises: Promise<void>[] = [];
-
-    //     for (let i = 0; i < items.length; i++) {
-    //         const item = items[i].webkitGetAsEntry?.();
-    //         if (item) {
-    //             promises.push(traverseFileTree(item));
-    //         }
-    //     }
-
-    //     await Promise.all(promises);
-
-    //     if (droppedFiles.length > 0) {
-    //         setFiles((prev) => [...prev, ...droppedFiles]);
-    //     }
-    // };
 
     const handleDrop = async (event: React.DragEvent<HTMLDivElement>) => {
         event.preventDefault();
-    
+
         const items = event.dataTransfer.items;
-    
-        // ✅ [NEW] Reject if more than one item is dropped
         if (items.length !== 1) {
             ToastMessage("Please drop only one file.", "error", "");
             return;
         }
-    
+
         const droppedFiles: File[] = [];
-    
+
         const traverseFileTree = async (item: any, path = ""): Promise<void> => {
             return new Promise((resolve) => {
                 if (item.isFile) {
@@ -354,24 +295,22 @@ const UserDashboard: React.FC = () => {
                         resolve();
                     });
                 } else if (item.isDirectory) {
-                    // ✅ [NEW] Reject directories
                     ToastMessage("Folders are not allowed. Please drop only a file.", "error", "");
                     resolve();
                 }
             });
         };
-    
+
         const item = items[0].webkitGetAsEntry?.();
         if (item) {
             await traverseFileTree(item);
         }
-    
-        // ✅ [MODIFIED] Replace existing files instead of appending
+
         if (droppedFiles.length > 0) {
             setFiles(droppedFiles); // replaces old files
         }
     };
-    
+
     const uploadToContract = async (folderCid: any) => {
         try {
             const adminWallet = new ethers.Wallet(config.adminPrivateKey, provider);
@@ -653,44 +592,48 @@ const UserDashboard: React.FC = () => {
 
                         {
 
-                            isCircularLoading ?<div className="flex items-center justify-center mt-40">
+                            isCircularLoading ? <div className="flex items-center justify-center mt-40">
                                 <CircularLoader size={30} />
-                                </div>
+                            </div>
                                 :
-                                <div className="max-w-7xl mx-auto px-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mt-15 mb-8">
-                                    {ipfsContents?.map((file: any, index: number) => (
-                                        <div
-                                            key={index}
-                                            onClick={() => openPreview(file)}
-                                            className="bg-white cursor-pointer w-full max-w-sm mx-auto rounded-xl shadow-xl flex flex-col items-center hover:scale-105 transition-transform duration-200 p-4"
-                                        >
-                                            {
-                                                file.mimeType === 'application/pdf' ? (
-                                                    <img
-                                                        src={pdficon}
-                                                        alt="PDF"
-                                                        className="w-40 h-40 sm:w-44 sm:h-44 xl:w-48 xl:h-48 object-contain rounded-lg shadow-md"
-                                                    />
-                                                ) : (file.mimeType === 'image/jpeg' || file.mimeType === 'image/png' || file.mimeType === 'image/jpg') ? (
-                                                    <img
-                                                        src={file?.url}
-                                                        alt="image"
-                                                        className="w-40 h-40 sm:w-44 sm:h-44 xl:w-48 xl:h-48 object-cover rounded-lg shadow-md"
-                                                    />
-                                                ) : (
-                                                    <img
-                                                        src={fileIcons}
-                                                        alt="File Icon"
-                                                        className="w-40 h-40 sm:w-44 sm:h-44 xl:w-48 xl:h-48 object-contain rounded-lg shadow-md"
-                                                    />
-                                                )
-                                            }
-                                            <p className="text-sm font-medium text-gray-700 mt-2 text-center break-words">
-                                                {file?.folderName}
-                                            </p>
-                                        </div>
-                                    ))}
-                                </div>
+                                <>
+                                    {/* <h1 className="text-3xl text-center mt-5 mb-5 font-bold text-gray-800"> Uploaded Documents</h1> */}
+                                    <div className="max-w-7xl mx-auto px-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mt-15 mb-8">
+
+                                        {ipfsContents?.map((file: any, index: number) => (
+                                            <div
+                                                key={index}
+                                                onClick={() => openPreview(file)}
+                                                className="bg-white cursor-pointer w-full max-w-sm mx-auto rounded-xl shadow-xl flex flex-col items-center hover:scale-105 transition-transform duration-200 p-4"
+                                            >
+                                                {
+                                                    file.mimeType === 'application/pdf' ? (
+                                                        <img
+                                                            src={pdficon}
+                                                            alt="PDF"
+                                                            className="w-40 h-40 sm:w-44 sm:h-44 xl:w-48 xl:h-48 object-contain rounded-lg shadow-md"
+                                                        />
+                                                    ) : (file.mimeType === 'image/jpeg' || file.mimeType === 'image/png' || file.mimeType === 'image/jpg') ? (
+                                                        <img
+                                                            src={file?.url}
+                                                            alt="image"
+                                                            className="w-40 h-40 sm:w-44 sm:h-44 xl:w-48 xl:h-48 object-cover rounded-lg shadow-md"
+                                                        />
+                                                    ) : (
+                                                        <img
+                                                            src={fileIcons}
+                                                            alt="File Icon"
+                                                            className="w-40 h-40 sm:w-44 sm:h-44 xl:w-48 xl:h-48 object-contain rounded-lg shadow-md"
+                                                        />
+                                                    )
+                                                }
+                                                <p className="text-sm font-medium text-gray-700 mt-2 text-center break-words">
+                                                    {file?.folderName}
+                                                </p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </>
                         }
 
 

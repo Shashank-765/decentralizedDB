@@ -5,7 +5,7 @@ export interface IUser extends Document {
   email: string;
   userType: string;
   privateKey: string;
-  documentHash: string[];
+  documentType: string;
   walletAddress: string;
   isBlocked: boolean;
   token: string;
@@ -17,7 +17,7 @@ const UserSchema = new Schema<IUser>(
     email: { type: String, required: true, unique: true },
     userType: { type: String, default: "User" },
     privateKey: { type: String }, // it should be required 
-    documentHash: [{ type: String }],
+    documentType: { type: String ,default:""},
     walletAddress: { type: String },
     isBlocked: { type: Boolean, default: false },
     token: { type: String }
