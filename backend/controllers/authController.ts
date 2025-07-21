@@ -1,5 +1,8 @@
 import { Request, Response } from "express";
 import * as authService from "../services/authService";
+
+
+
 export const createAdmin = async (req: Request, res: Response) => {
     try {
         const { name, email } = req.body;
@@ -46,8 +49,8 @@ export const userList = async (req: Request, res: Response) => {
 };
 export const blockUser = async (req: Request, res: Response) => {
     try {
-        const { id } = req.body;
-        const user = await authService.blockUser(id);
+        const { _id } = req.body;
+        const user = await authService.blockUser(_id);
         res.status(200).json({ message: "User blocked successfully", user });
     } catch (error: any) {
         res.status(400).json({ error: error.message });
@@ -55,8 +58,8 @@ export const blockUser = async (req: Request, res: Response) => {
 };
 export const unblockUser = async (req: Request, res: Response) => {
     try {
-        const { id } = req.body;
-        const user = await authService.unblockUser(id);
+        const { _id } = req.body;
+        const user = await authService.unblockUser(_id);
         res.status(200).json({ message: "User unblocked successfully", user });
     } catch (error: any) {
         res.status(400).json({ error: error.message });
@@ -64,8 +67,8 @@ export const unblockUser = async (req: Request, res: Response) => {
 };
 export const addDocument = async (req: Request, res: Response) => {
     try {
-        const { userId, cid, type, walletAddress } = req.body;
-        const document = await authService.addDocument(userId, cid, type, walletAddress);
+        const { userId, cid, type, approvedBy } = req.body;
+        const document = await authService.addDocument(userId, cid, type, approvedBy);
         res.status(200).json({ message: "Document added successfully", document });
     } catch (error: any) {
         res.status(400).json({ error: error.message });
@@ -87,5 +90,47 @@ export const getAllAdmins = async (req: Request, res: Response) => {
         res.status(400).json({ error: error.message });
     }
 };
+export const approveDocument = async (req: Request, res: Response) => {
+    try {
+        const { cid, approvedBy } = req.body
+        const data = await authService.approvedDocument(cid, approvedBy);
+        return res.status(200).json({ message: "Document Approved successfully", data })
+    } catch (error: any) {
+        res.status(400).json({ error: error.message })
+    }
+}
+export const rejectDocument = async (req: Request, res: Response) => {
+    try {
+        const { cid, rejectedBy } = req.body
+        const data = await authService.rejectDocument(cid, rejectedBy);
+        return res.status(200).json({ message: "Document Rejected successfully", data })
+    } catch (error: any) {
+        res.status(400).json({ error: error.message })
+    }
+}
+export const getGraphData = async (req: Request, res: Response) => {
+    try {
+        const {filterType, startDate, endDate } = req.query;
+        
+        let format = "%Y-%m"; 
+        if (filterType === "day") format = "%Y-%m-%d";
+        else if (filterType === "week") format = "%Y-%U";
+        else if (filterType === "year") format = "%Y";
+        const data = await authService.getGraphData(format, startDate as string,endDate as string);
+        res.status(200).json({ message: "User Graph Data Fetched successful", data });
+    } catch (error: any) {
+        res.status(400).json({ error: error.message });
+    }
+}
+export const fakeDataToStore = async (req: Request, res: Response) => {
+    try {
+        const data = await authService.fakeDataToStore();
+        res.status(200).json({ message: "Fake Data Stored successfully", data });
+    } catch (error: any) {
+        res.status(400).json({ error: error.message });
+    }
+}
+
+
 
 

@@ -2,13 +2,13 @@
 import express from "express";
 import {
   createAdmin, login, userList, updateUser, getuserdata,
-  blockUser, unblockUser, addDocument, getAllUsers, getAllAdmins
+  blockUser, unblockUser, addDocument, getAllUsers, getAllAdmins, approveDocument, rejectDocument,getGraphData,fakeDataToStore
 } from "../controllers/authController";
 import { authorize } from "../Authorization/Auth";
 
 const router = express.Router();
 
-router.post("/createAdmin", createAdmin);
+router.post("/createAdmin", authorize, createAdmin);
 router.post("/updateUser", authorize, updateUser);
 router.post("/login", login);
 router.get("/userList", userList);
@@ -18,18 +18,9 @@ router.get("/getAllAdmins", getAllAdmins);
 router.post("/blockUser", authorize, blockUser);
 router.post("/unblockUser", authorize, unblockUser);
 router.post("/addDocument", authorize, addDocument);
-// router.get("/logout", (req, res) => {
-//   req.logout(err => {
-//     if (err) {
-//       return res.status(500).json({ message: "Logout failed" });
-//     }
-
-//     req.session.destroy(() => {
-//       res.clearCookie("connect.sid");
-//       res.status(200).json({ message: "Logged out" });
-//     });
-//   });
-// });
-
+router.post("/approveDocument", authorize, approveDocument);
+router.post("/rejectDocument", authorize, rejectDocument)
+router.get('/getGraphData',authorize,getGraphData)
+router.post('/fakeDataToStore',fakeDataToStore)
 
 export default router;

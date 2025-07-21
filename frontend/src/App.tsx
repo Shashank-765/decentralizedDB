@@ -70,7 +70,9 @@ function App() {
         pauseOnFocusLoss
         draggable
         pauseOnHover
-        theme="light" />
+        theme="light"
+        style={{ marginTop: '110px' }}
+        />
       <Header />
       <Routes>
         <Route path="/" element={<Homepage />} />

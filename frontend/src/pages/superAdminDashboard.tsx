@@ -1,8 +1,13 @@
 import React, { useRef, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import config from '../../config.json';
 import { FiHome, FiUsers, FiBarChart2 } from "react-icons/fi";
 import { FaUserShield, FaEye } from "react-icons/fa";
 import axios from "axios";
+import ToastMessage from "./toastmessage";
+import blockIcon from '../assets/prohibition.png';
+import unblock from '../assets/unlock.png';
+import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, Tooltip, Legend, CartesianGrid, ResponsiveContainer } from 'recharts';
 
 type Document = {
   id: number;
@@ -12,18 +17,20 @@ type Document = {
 };
 
 type Admin = {
-  id: number;
+  _id: string;
   name: string;
   email: string;
   userType: string;
+  isBlocked: boolean;
 };
 
 type User = {
-  id: number;
+  _id: string;
   name: string;
   email: string;
   role: string;
   userType: string;
+  isBlocked: boolean;
 };
 
 const dummyDocuments: Document[] = [
@@ -32,6 +39,75 @@ const dummyDocuments: Document[] = [
   { id: 3, name: "User C - Doc 3", status: "approved", adminName: "Admin Two" },
   { id: 4, name: "User D - Doc 4", status: "rejected", adminName: "Admin One" },
 ];
+const today = new Date();
+const yesterday = new Date(today);
+yesterday.setDate(yesterday.getDate() - 1);
+
+const DateFilterPopup = ({ onApply }: { onApply: (start: string, end: string) => void }) => {
+  const [showPopup, setShowPopup] = useState(false);
+  const [startDate, setStartDate] = useState(yesterday.toISOString().split('T')[0]);
+  const [endDate, setEndDate] = useState(today.toISOString().split('T')[0]);
+
+  const handleApply = () => {
+    onApply(startDate, endDate);
+    setShowPopup(false);
+  };
+
+  return (
+    <div>
+      {/* Trigger Button */}
+      <button
+        onClick={() => setShowPopup(true)}
+        className="bg-blue-600 text-white px-4 py-2 rounded"
+      >
+        Select Date Range
+      </button>
+
+      {/* Modal Popup */}
+      {showPopup && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-80 shadow-lg">
+            <h2 className="text-lg font-semibold mb-4 text-center">Select Date Range</h2>
+
+            {/* Start Date */}
+            <label className="block mb-2 font-medium">Start Date</label>
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="w-full border p-2 mb-4 rounded"
+            />
+
+            {/* End Date */}
+            <label className="block mb-2 font-medium">End Date</label>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="w-full border p-2 mb-4 rounded"
+            />
+
+            {/* Actions */}
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setShowPopup(false)}
+                className="px-4 py-2 bg-gray-300 rounded"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleApply}
+                className="px-4 py-2 bg-blue-600 text-white rounded"
+              >
+                Apply Filter
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 
 const SuperAdminDashboard: React.FC = () => {
   const [modalType, setModalType] = useState<"approved" | "rejected" | null>(null);
@@ -42,7 +118,12 @@ const SuperAdminDashboard: React.FC = () => {
   const [dataToSend, setdataToSend] = useState({ name: "", email: "" })
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [allAdmins, setAllAdmins] = useState<Admin[]>([]);
-
+  const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff8042'];
+  const [graphData, setGraphData] = useState([]);
+  const [filterType, setFilterType] = useState('day'); // day, week, month, year
+  const [startDate, setStartDate] = useState(yesterday.toISOString().split('T')[0]);
+  const [endDate, setEndDate] = useState(today.toISOString().split('T')[0]);
+  const localUserData = JSON.parse(localStorage.getItem("user") || "{}");
 
   const totalUsers = allUsers.length;
   const totalAdmins = allAdmins.length;
@@ -88,7 +169,7 @@ const SuperAdminDashboard: React.FC = () => {
 
   const createAdminHandler = async () => {
     try {
-      const response = await axios.post("http://localhost:4000/api/auth/createAdmin", {
+      const response = await axios.post(`${config.URL_BACKEND}api/auth/createAdmin`, {
         name: dataToSend.name,
         email: dataToSend.email,
       });
@@ -105,7 +186,7 @@ const SuperAdminDashboard: React.FC = () => {
   const fetchAllUser = async () => {
 
     try {
-      const response = await axios.get("http://localhost:4000/api/auth/getAllUsers");
+      const response = await axios.get(`${config.URL_BACKEND}api/auth/getAllUsers`);
       if (response.status === 200) {
         setAllUsers(response.data.user);
       }
@@ -118,7 +199,7 @@ const SuperAdminDashboard: React.FC = () => {
   const fetchAllAdmins = async () => {
 
     try {
-      const response = await axios.get("http://localhost:4000/api/auth/getAllAdmins");
+      const response = await axios.get(`${config.URL_BACKEND}api/auth/getAllAdmins`);
       if (response.status === 200) {
         setAllAdmins(response.data.admin);
       }
@@ -132,6 +213,88 @@ const SuperAdminDashboard: React.FC = () => {
     fetchAllUser();
     fetchAllAdmins();
   }, [])
+
+  const blockUser = async (_id: string, userType: string) => {
+    try {
+      await axios.post(`${config.URL_BACKEND}api/auth/blockUser`, { _id },
+        { headers: { _token: localUserData?.token } }
+      );
+      ToastMessage("User UnBlocked Successfully", "success", "");
+      if (userType === "Admin") {
+        fetchAllAdmins();
+      } else {
+        fetchAllUser();
+      }
+    } catch (error) {
+      console.error("Error blocking user:", error);
+    }
+  };
+
+  const unblockUser = async (_id: string, userType: string) => {
+    try {
+      await axios.post(`${config.URL_BACKEND}api/auth/unblockUser`, { _id },
+        { headers: { _token: localUserData?.token } }
+      );
+      ToastMessage("User Blocked Successfully", "success", "");
+      if (userType === "Admin") {
+        fetchAllAdmins();
+      } else {
+        fetchAllUser();
+      }
+    } catch (error) {
+      console.error("Error unblocking user:", error);
+    }
+  };
+
+  const fetchGraphData = async () => {
+    try {
+      const res = await axios.get(`${config.URL_BACKEND}api/auth/getGraphData`, {
+        params: { filterType, startDate, endDate },
+        headers: { _token: localUserData?.token }
+      });
+      setGraphData(res.data.data);
+      setStartDate('');
+      setEndDate('');
+    } catch (error) {
+      console.error('Error fetching report data:', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchGraphData();
+  }, [filterType]);
+
+  const selectDateHandler = (type: string = 'week') => {
+    setFilterType(type);
+    const now = new Date();
+    let start: Date;
+    let end = now;
+
+    switch (type) {
+      case 'day':
+        start = new Date(now.getTime() - 24 * 60 * 60 * 1000); // last 24 hours
+        break;
+      case 'week':
+        start = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000); // last 7 days
+        break;
+      case 'month':
+        start = new Date(now);
+        start.setMonth(start.getMonth() - 1); // last month
+        break;
+      case 'year':
+        start = new Date(now);
+        start.setFullYear(start.getFullYear() - 1); // last year
+        break;
+      case 'custom':
+        return; // do nothing (user chooses manually)
+      default:
+        return;
+    }
+
+    setStartDate(start.toISOString().split('T')[0]);
+    setEndDate(end.toISOString().split('T')[0]);
+
+  };
 
   return (
     <div className="min-h-screen overflow-x-hidden rounded-3xl bg-white mx-4 flex">
@@ -233,9 +396,14 @@ const SuperAdminDashboard: React.FC = () => {
                           <td className="py-4 px-6 text-base">{admin.name}</td>
                           <td className="py-4 px-6 text-base">{admin.email}</td>
                           <td className="py-4 px-6 text-base">{admin.userType}</td>
-                          <td className="py-4 px-6 text-base align-center">
+                          <td className="py-4 px-6 text-base flex gap-2 justify-center">
                             {/* <button className="text-white px-2 py-1 rounded-full text-sm font-medium transition"> */}
-                            <FaEye onClick={() => navigateToAdmin(admin)} className="w-5 h-5 mx-auto cursor-pointer" />
+                            {admin.isBlocked ? (
+                              <button onClick={() => blockUser(admin?._id, admin?.userType)} className="text-red-600"><img src={blockIcon} alt="" className="w-5 h-5 cursor-pointer" /></button>
+                            ) : (
+                              <button onClick={() => unblockUser(admin?._id, admin?.userType)} className="text-green-600"><img src={unblock} alt="" className="w-5 h-5 cursor-pointer" /></button>
+                            )}
+                            <FaEye onClick={() => navigateToAdmin(admin)} className="w-5 h-5 cursor-pointer" />
                             {/* </button> */}
                           </td>
                         </tr>
@@ -264,9 +432,14 @@ const SuperAdminDashboard: React.FC = () => {
                           <td className="py-4 px-6 text-base">{user.name}</td>
                           <td className="py-4 px-6 text-base">{user.email}</td>
                           <td className="py-4 px-6 text-base">{user.userType}</td>
-                          <td className="py-4 px-6 text-base">
+                          <td className="py-4 px-6 text-base flex gap-2 justify-center">
                             {/* <button className="bg-indigo-500 hover:bg-indigo-600 text-white px-2 py-1 rounded-full text-sm font-medium transition"> */}
-                            <FaEye onClick={() => navigateToUser(user)} className="w-5 h-5 mx-auto cursor-pointer" />
+                            {user.isBlocked ? (
+                              <button onClick={() => blockUser(user?._id, user?.userType)} className="text-red-600"><img src={blockIcon} alt="" className="w-5 h-5 cursor-pointer" /></button>
+                            ) : (
+                              <button onClick={() => unblockUser(user?._id, user?.userType)} className="text-green-600"><img src={unblock} alt="" className="w-5 h-5 cursor-pointer" /></button>
+                            )}
+                            <FaEye onClick={() => navigateToUser(user)} className="w-5 h-5 cursor-pointer" />
                             {/* </button> */}
                           </td>
                         </tr>
@@ -300,9 +473,14 @@ const SuperAdminDashboard: React.FC = () => {
                         <td className="py-4 px-6 text-base">{admin.name}</td>
                         <td className="py-4 px-6 text-base">{admin.email}</td>
                         <td className="py-4 px-6 text-base">{admin.userType}</td>
-                        <td className="py-4 px-6">
+                        <td className="py-4 px-6 text-base flex gap-2 justify-center">
                           {/* <button className="bg-indigo-500 hover:bg-indigo-600 text-white px-2 py-1 rounded-full text-sm font-medium transition"> */}
-                          <FaEye onClick={() => navigateToAdmin(admin)} className="w-5 h-5 mx-auto cursor-pointer" />
+                          {admin.isBlocked ? (
+                            <button onClick={() => blockUser(admin?._id, admin?.userType)} className="text-red-600"><img src={blockIcon} alt="" className="w-5 h-5 cursor-pointer" /></button>
+                          ) : (
+                            <button onClick={() => unblockUser(admin?._id, admin?.userType)} className="text-green-600"><img src={unblock} alt="" className="w-5 h-5 cursor-pointer" /></button>
+                          )}
+                          <FaEye onClick={() => navigateToAdmin(admin)} className="w-5 h-5 cursor-pointer" />
                           {/* </button> */}
                         </td>
                       </tr>
@@ -337,9 +515,14 @@ const SuperAdminDashboard: React.FC = () => {
                         <td className="py-4 px-6 text-base">{user.email}</td>
                         <td className="py-4 px-6 text-base">{user.userType}</td>
                         <td className="py-4 px-6 text-base">{user.userType}</td>
-                        <td className="py-4 px-6">
+                        <td className="py-4 px-6 text-base flex gap-2 justify-center">
                           {/* <button className="bg-indigo-500 hover:bg-indigo-600 text-white px-2 py-1 rounded-full text-sm font-medium transition"> */}
-                          <FaEye onClick={() => navigateToUser(user)} className="w-5 h-5 mx-auto cursor-pointer" />
+                          {user.isBlocked ? (
+                            <button onClick={() => blockUser(user?._id, user?.userType)} className="text-red-600"><img src={blockIcon} alt="" className="w-5 h-5 cursor-pointer" /></button>
+                          ) : (
+                            <button onClick={() => unblockUser(user?._id, user?.userType)} className="text-green-600"><img src={unblock} alt="" className="w-5 h-5 cursor-pointer" /></button>
+                          )}
+                          <FaEye onClick={() => navigateToUser(user)} className="w-5 h-5 cursor-pointer" />
                           {/* </button> */}
                         </td>
                       </tr>
@@ -354,12 +537,104 @@ const SuperAdminDashboard: React.FC = () => {
         {
           activeTab === "Reports" &&
           <>
-            <div className="flex-1 min-w-0 bg-white shadow-2xl rounded-2xl overflow-hidden">
-              <h2 className="text-lg font-semibold text-gray-700">Reports</h2>
-              <div className="overflow-x-auto">
+            <div className="flex gap-4 items-center">
+              <select
+                value={filterType}
+                onChange={(e) => selectDateHandler(e.target.value)}
+                className="border p-2 rounded"
+              >
+                <option value="day">Day</option>
+                <option value="week">Week</option>
+                <option value="month">Month</option>
+                <option value="year">Year</option>
+              </select>
+
+              <DateFilterPopup
+                onApply={(start, end) => {
+                  setStartDate(start);
+                  setEndDate(end);
+                  fetchGraphData();
+                }}
+              />
+            </div>
+            <div className="flex justify-around min-w-0 max-h-80 mt-5 rounded-2xl">
+              <div className="w-[45%] h-80 border border-gray-500 rounded-2xl mt-4 mb-4">
+                <h2 className="text-xl font-semibold ml-5 mb-2">Line Chart - Admins</h2>
+                <ResponsiveContainer>
+                  <LineChart data={graphData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="label" />
+                    <YAxis />
+                    <Tooltip />
+                    <Legend />
+                    <Line type="monotone" dataKey="count" stroke="#8884d8" />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="w-[45%] h-80 border border-gray-500 rounded-2xl mt-4 mb-4">
+                <h2 className="text-xl font-semibold ml-5 mb-2">Bar Chart - Admins</h2>
+                <ResponsiveContainer>
+                  <BarChart data={graphData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="label" />
+                    <YAxis />
+                    <Tooltip />
+                    <Legend />
+                    <Bar dataKey="count" fill="#82ca9d" />
+                  </BarChart>
+                </ResponsiveContainer>
               </div>
             </div>
-            <h1 className="text-lg text-center font-semibold text-gray-700 px-6 py-4 border-b">comming soon...</h1>
+
+
+            {/* Pie Chart */}
+            <div className="flex justify-around min-w-0 max-h-96 mt-20 rounded-2xl">
+              <div className="w-[45%] h-80 border border-gray-500 rounded-2xl mt-4 mb-4">
+                <h2 className="text-xl font-semibold ml-5 mb-2">Pie Chart - Admins</h2>
+                <ResponsiveContainer>
+                  <PieChart>
+                    <Pie
+                      data={graphData}
+                      dataKey="count"
+                      nameKey="label"
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={120}
+                      label
+                    >
+                      {graphData?.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="w-[45%] h-80 border border-gray-500 rounded-2xl mt-4 mb-4">
+                <h2 className="text-xl font-semibold ml-5 mb-2">Pie Chart - Users</h2>
+                <ResponsiveContainer>
+                  <PieChart>
+                    <Pie
+                      data={graphData}
+                      dataKey="count"
+                      nameKey="label"
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={120}
+                      label
+                    >
+                      {graphData?.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
           </>
         }
 
@@ -393,7 +668,7 @@ const SuperAdminDashboard: React.FC = () => {
           )
         }
       </main>
-    </div>
+    </div >
   );
 };
 

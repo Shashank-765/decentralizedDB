@@ -1,14 +1,16 @@
 import jwt, { JwtPayload } from 'jsonwebtoken';
 import { Request, Response, NextFunction } from 'express';
 import User, { IUser } from "../models/User";
+import dotenv from "dotenv";
+dotenv.config();
 
 // Custom Request type to add userData and id
 interface CustomRequest extends Request {
-  userData?: any; // ideally use your UserModel type
+  userData?: IUser;
   id?: number;
 }
 export const generateAccessToken = async (email: string): Promise<string> => {
-  const secret = '@metaspace@Bastionex';
+  const secret = process.env.JWT_SECRET as string;
   if (!secret) {
     throw new Error("JWT secret is not defined");
   }
@@ -17,28 +19,26 @@ export const generateAccessToken = async (email: string): Promise<string> => {
 };
 
 // Middleware to authorize user
-export const authorize = async (req: CustomRequest,res: Response,next: NextFunction): Promise<void> => {
+export const authorize = async (req: CustomRequest,res: Response,next: NextFunction): Promise< Response | void> => {
   const _secrate = req.headers["_token"] as string | undefined;
 
   if (!_secrate) {
-    res.status(401).json({ success: false, message: "Token missing" });
-    return;
+    return res.status(401).json({ success: false, message: "Token missing" });
   }
 
   try {
-    const decoded = jwt.verify(_secrate, '@metaspace@Bastionex') as JwtPayload;
+    const decoded = jwt.verify(_secrate, process.env.JWT_SECRET as string) as JwtPayload;
     const userData = await User.findOne({email:decoded?.email});
     if (!userData) {
-      res.status(400).json({ message: "User not found", success: false });
-      return;
+      return res.status(400).json({ message: "User not found", success: false });
     }
     req.userData = userData;
     req.id = userData.id;
     next();
   } catch (err) {
     console.error("JWT Error:", err);
-    res
+    return res
       .status(401)
-      .json({ success: false, message: "Unauthorized user", error: err });
+      .json({ success: false, message: "Unauthorized user...", error: err });
   }
 };

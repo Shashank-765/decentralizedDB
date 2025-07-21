@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState } from "react";
-import { FiHome, FiUsers, FiBarChart2 } from "react-icons/fi";
+import { FiHome, FiUsers } from "react-icons/fi";
 import { FaCloudUploadAlt } from "react-icons/fa";
 import { create } from "ipfs-http-client";
 import CircularLoader from "../CircularLoader/CircularLoader";
@@ -10,8 +10,7 @@ import CryptoJS from 'crypto-js';
 import pdficon from '../assets/pdficon.png'
 import fileIcons from '../assets/fileIcons.png'
 import { useLocation } from "react-router-dom";
-const backendUrl = import.meta.env.VITE_BACKEND_URL;
-const ENCRYPTION_KEY = 'your-strong-secret-key';
+const ENCRYPTION_KEY = import.meta.env.VITE_IPFS_ENCRYPTION_KEY;
 import axios from 'axios';
 interface DecryptedFile {
     url: string;
@@ -423,9 +422,9 @@ const UserDashboard: React.FC = () => {
                 foldercid2 = file.cid.toString();
             }
 
-            console.log(foldercid2, 'this is second foldercid2 =============>')
+            console.log(foldercid2, 'this is cid of json data =============>')
 
-            const response = await axios.post(`${backendUrl}/api/auth/addDocument`, {
+            const response = await axios.post(`${config.URL_BACKEND}api/auth/addDocument`, {
                 userId: userData?._id,
                 cid: foldercid2,
                 type: formData.type,

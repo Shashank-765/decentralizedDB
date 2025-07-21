@@ -8,7 +8,7 @@
 # next.js
 **/.next/
 **/out/
-
+.gitignore
 # vercel
 .vercel
 
@@ -17,6 +17,9 @@ frontend/coverage
 
 # production
 frontend/build
+
+frontend/.env
+backend/.env
 
 # misc
 .DS_Store

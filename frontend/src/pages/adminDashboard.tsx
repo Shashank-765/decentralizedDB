@@ -13,6 +13,7 @@ import { create } from 'ipfs-http-client';
 const provider = new ethers.providers.JsonRpcProvider(config.URL_RPC);
 const adminWallet = new ethers.Wallet(config.adminPrivateKey, provider);
 const contract = new ethers.Contract(config.contractAddress, config.abi, adminWallet);
+const ENCRYPTION_KEY = import.meta.env.VITE_IPFS_ENCRYPTION_KEY;
 
 interface DecryptedFile {
   documentName: string;
@@ -22,8 +23,9 @@ interface DecryptedFile {
   approved: boolean;
   folderName: string;
   type: string;
+  cid:string
 }
-const ENCRYPTION_KEY = 'your-strong-secret-key';
+
 
 const ipfs = create({
   url: config.URL_IPFS,
@@ -109,7 +111,6 @@ export default function UserDashboard() {
             return { blob: null, mimeType: 'text/plain' };
           }
         };
-
         try {
           const results = await Promise.all(
             documents.map(async (file: any, index: number) => {
@@ -118,7 +119,8 @@ export default function UserDashboard() {
               return {
                 ...content,
                 index,
-                approved: isapproved
+                approved: isapproved,
+                cid:file[0]
               }
             })
           );
@@ -155,15 +157,18 @@ export default function UserDashboard() {
                       approved: file.approved,
                       folderName: file?.name,
                       type: file?.type,
+                      cid:file.cid
                     });
                   }
                 }
               }
             } catch (e) {
+              setCircularLoading(false);
               console.error(`Failed to decrypt CID ${file?.folderCid}:`, e);
             }
           }
         } catch (err) {
+          setCircularLoading(false);
           console.error('Overall IPFS file fetch error:', err);
         }
 
@@ -189,6 +194,7 @@ export default function UserDashboard() {
       setCircularLoading(false);
       setUsers(userData);
     } catch (error) {
+      setCircularLoading(false);
       console.error("Error fetching users:", error);
     }
   };
@@ -197,10 +203,22 @@ export default function UserDashboard() {
     fetchUsers();
   }, []);
 
-  const approve = async (walletAddress: string, index: number) => {
+  const approve = async (walletAddress: string, index: number,cid:string) => {
     try {
       const tx = await contract.verifyDocument(walletAddress, index);
       await tx.wait();
+        
+      try {
+        const response = await axios.post(`${config.URL_BACKEND}api/auth/approveDocument`, {cid,approvedBy:localUserData?._id},
+          { headers: { _token: localUserData?.token } }
+        );
+        if(response.status === 200){
+            console.log(response.data)
+        }
+      } catch (error:any) {
+          console.log(error)
+      }
+
       ToastMessage("Document Approved Successfully", "success", tx.hash || "");
       setUsers((prevUsers) =>
         prevUsers.map((user) =>
@@ -224,6 +242,7 @@ export default function UserDashboard() {
   };
 
   const openModal = (user: any) => {
+    console.log(user,'this is user')
     setSelectedFiles(user.fileLinks);
     setSelectedUser(user.walletAddress);
     setShowModal(true);
@@ -281,6 +300,7 @@ export default function UserDashboard() {
   const navigateUserdahsboard = (user: any) => {
     navigate(`/userDashboard`, { state: { user } });
   };
+  console.log(circularLoading,'this is circular loading')
 
   return (
     <div className="min-h-screen overflow-x-hidden rounded-3xl mx-4 flex">
@@ -326,86 +346,86 @@ export default function UserDashboard() {
               circularLoading ? <div className="flex justify-center items-center mt-50 h-80">
                 <CircularLoader size={30} />
               </div> :
-                <>
-                  <div className="overflow-x-auto rounded-xl bg-white shadow">
-                    <table className="w-full table-auto border-collapse text-sm">
-                      <thead className="bg-gray-100 text-gray-800 text-lg font-semibold">
-                        <tr>
-                          <th className="py-4 px-6 text-left">User Name</th>
-                          <th className="py-4 px-6 text-left">Email</th>
-                          <th className="py-4 px-6 text-center">Documents</th>
-                          <th className="py-4 px-6 text-left">Preview</th>
-                          <th className="py-4 px-6 text-center">Status</th>
-                          <th className="py-4 px-6 text-center">Action</th>
-                        </tr>
-                      </thead>
-                      <tbody className="text-gray-700">
-                        {currentUsers.map((user) => (
-                          <tr key={user.id} className="border-b border-gray-200 hover:bg-gray-50 transition">
-                            <td className="py-4 px-6">{user.name}</td>
-                            <td className="py-4 px-6">{user.email}</td>
-                            <td className="py-4 px-6 text-center">{user.files}</td>
-                            <td className="py-4 px-6 text-center">
-                              {user.fileLinks.length > 0 ? (
-                                <button onClick={() => openModal(user)} className="text-blue-600 hover:text-blue-800 font-medium flex justify-center items-center gap-1">
-                                  <FaEye /> View Files
-                                </button>
-                              ) : 'No Files'}
-                            </td>
-                            <td className="py-4 px-6 text-center">
-                              {user.status === "Approved" ? (
-                                <span className="text-green-600 flex items-center justify-center gap-1">
-                                  {user.fileLinks.length > 0 ? <> <FaCheckCircle /> Approved</> : 'Not Yet'}
-                                </span>
-                              ) : (
-                                <span className="text-yellow-500 flex items-center justify-center gap-1">
-                                  <FaTimesCircle /> Pending
-                                </span>
-                              )}
-                            </td>
-                            <td className="py-4 px-6 text-center flex gap-2 justify-center">
-                              {user.isBlocked ? (
-                                <button onClick={() => blockUser(user.id)} className="text-red-600"><img src={blockIcon} alt="" className="w-5 h-5 cursor-pointer" /></button>
-                              ) : (
-                                <button onClick={() => unblockUser(user.id)} className="text-green-600"><img src={unblock} alt="" className="w-5 h-5 cursor-pointer" /></button>
-                              )}
-                              <FaEye onClick={() => navigateUserdahsboard(user)} className="w-5 h-5 cursor-pointer" />
-                            </td>
+                !currentUsers.length ? (<><p className="text-center text-gray-600">No users found</p></>)
+                  :
+                  <>
+                    <div className="overflow-x-auto rounded-xl bg-white shadow">
+                      <table className="w-full table-auto border-collapse text-sm">
+                        <thead className="bg-gray-100 text-gray-800 text-lg font-semibold">
+                          <tr>
+                            <th className="py-4 px-6 text-left">User Name</th>
+                            <th className="py-4 px-6 text-left">Email</th>
+                            <th className="py-4 px-6 text-center">Documents</th>
+                            <th className="py-4 px-6 text-left">Preview</th>
+                            <th className="py-4 px-6 text-center">Status</th>
+                            <th className="py-4 px-6 text-center">Action</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                        </thead>
+                        <tbody className="text-gray-700">
+                          {currentUsers.map((user) => (
+                            <tr key={user.id} className="border-b border-gray-200 hover:bg-gray-50 transition">
+                              <td className="py-4 px-6">{user.name}</td>
+                              <td className="py-4 px-6">{user.email}</td>
+                              <td className="py-4 px-6 text-center">{user.files}</td>
+                              <td className="py-4 px-6 text-center">
+                                {user.fileLinks.length > 0 ? (
+                                  <button onClick={() => openModal(user)} className="text-blue-600 hover:text-blue-800 font-medium flex justify-center items-center gap-1">
+                                    <FaEye /> View Files
+                                  </button>
+                                ) : 'No Files'}
+                              </td>
+                              <td className="py-4 px-6 text-center">
+                                {user.status === "Approved" ? (
+                                  <span className="text-green-600 flex items-center justify-center gap-1">
+                                    {user.fileLinks.length > 0 ? <> <FaCheckCircle /> Approved</> : 'Not Yet'}
+                                  </span>
+                                ) : (
+                                  <span className="text-yellow-500 flex items-center justify-center gap-1">
+                                    <FaTimesCircle /> Pending
+                                  </span>
+                                )}
+                              </td>
+                              <td className="py-4 px-6 text-center flex gap-2 justify-center">
+                                {user.isBlocked ? (
+                                  <button onClick={() => blockUser(user.id)} className="text-red-600"><img src={blockIcon} alt="" className="w-5 h-5 cursor-pointer" /></button>
+                                ) : (
+                                  <button onClick={() => unblockUser(user.id)} className="text-green-600"><img src={unblock} alt="" className="w-5 h-5 cursor-pointer" /></button>
+                                )}
+                                <FaEye onClick={() => navigateUserdahsboard(user)} className="w-5 h-5 cursor-pointer" />
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
 
-                  <div className="flex justify-between items-center mt-6 px-4">
-                    <button
-                      onClick={prevPage}
-                      disabled={currentPage === 1}
-                      className={`px-5 py-2 rounded-xl font-semibold text-white transition ${currentPage === 1 ? "bg-gray-400 cursor-not-allowed" : "bg-blue-500 hover:bg-blue-600"
-                        }`}
-                    >
-                      Previous
-                    </button>
-                    <span className="text-gray-600 text-lg font-medium">
-                      Page {currentPage} of {Math.ceil(users.length / usersPerPage)}
-                    </span>
-                    <button
-                      onClick={nextPage}
-                      disabled={currentPage === Math.ceil(users.length / usersPerPage)}
-                      className={`px-5 py-2 rounded-xl font-semibold text-white transition ${currentPage === Math.ceil(users.length / usersPerPage)
-                        ? "bg-gray-400 cursor-not-allowed"
-                        : "bg-blue-500 hover:bg-blue-600"
-                        }`}
-                    >
-                      Next
-                    </button>
-                  </div>
+                    <div className="flex justify-between items-center mt-6 px-4">
+                      <button
+                        onClick={prevPage}
+                        disabled={currentPage === 1}
+                        className={`px-5 py-2 rounded-xl font-semibold text-white transition ${currentPage === 1 ? "bg-gray-400 cursor-not-allowed" : "bg-blue-500 hover:bg-blue-600"
+                          }`}
+                      >
+                        Previous
+                      </button>
+                      <span className="text-gray-600 text-lg font-medium">
+                        Page {currentPage} of {Math.ceil(users.length / usersPerPage)}
+                      </span>
+                      <button
+                        onClick={nextPage}
+                        disabled={currentPage === Math.ceil(users.length / usersPerPage)}
+                        className={`px-5 py-2 rounded-xl font-semibold text-white transition ${currentPage === Math.ceil(users.length / usersPerPage)
+                          ? "bg-gray-400 cursor-not-allowed"
+                          : "bg-blue-500 hover:bg-blue-600"
+                          }`}
+                      >
+                        Next
+                      </button>
+                    </div>
 
-                </>
+                  </>
 
             }
-
-
 
             {showModal && (
               <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center px-4">
@@ -429,7 +449,7 @@ export default function UserDashboard() {
                         {!file.approved ? (
                           <>
                             <div className="flex gap-2">
-                              <button onClick={() => selectedUser && approve(selectedUser, file.index)} className="mt-2 px-4 py-1 bg-green-500 text-white rounded-lg hover:bg-green-600 flex items-center gap-1">
+                              <button onClick={() => selectedUser && approve(selectedUser, file.index,file.cid)} className="mt-2 px-4 py-1 bg-green-500 text-white rounded-lg hover:bg-green-600 flex items-center gap-1">
                                 <FaCheckCircle className="w-5 h-5" /> Approve
                               </button>
                               <button className="mt-2 px-4 py-1 bg-red-500 text-white rounded-lg hover:bg-green-600 flex items-center gap-1">
