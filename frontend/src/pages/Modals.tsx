@@ -1,10 +1,76 @@
 import { useState, useRef, useEffect } from "react";
-import { QRCodeCanvas } from 'qrcode.react';
+import QRCode from "qrcode";
+import copyImage from '../assets/copy.png'
+import ToastMessage from "./toastmessage";
+import logo1 from '../assets/images.jpg'
 
 
 
-export const QrcodeModel = ({ walletAddress, onClose }: { walletAddress: string | undefined; onClose: () => void }) => {
+export const QrcodeModel = ({ walletAddress, onClose, logo }: { walletAddress: string | undefined; onClose: () => void; logo: string }) => {
     const popupRef1 = useRef<HTMLDivElement>(null);
+    const canvasRef = useRef<HTMLCanvasElement>(null);
+    const canvasSize = 300;
+    const circleRadius = 60; // Increased circle radius
+    const logoSize = circleRadius * 2;
+  
+    useEffect(() => {
+        if (!walletAddress || !canvasRef.current) return;
+    
+        const canvas = canvasRef.current;
+        canvas.width = canvasSize;
+        canvas.height = canvasSize;
+    
+        QRCode.toCanvas(
+          canvas,
+          walletAddress,
+          {
+            errorCorrectionLevel: "H",
+            width: canvasSize,
+            margin: 1,
+            color: {
+              dark: "#000000",
+              light: "#ffffff",
+            },
+          },
+          (err) => {
+            if (err) console.error(err);
+            else {
+              const ctx = canvas.getContext("2d");
+              if (ctx) {
+                const centerX = canvasSize / 2;
+                const centerY = canvasSize / 2;
+    
+                ctx.fillStyle = "#ffffff";
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, circleRadius + 6, 0, 2 * Math.PI);
+                ctx.fill();
+    
+                // Draw logo inside a circular clip
+                const logoImg = new Image();
+                logoImg.src = logo; 
+                logoImg.onerror = () => {logoImg.src = logo1}
+                logoImg.crossOrigin = 'Anonymous';
+                logoImg.referrerPolicy = 'no-referrer';
+                logoImg.loading = 'lazy';
+                logoImg.onload = () => {
+                  ctx.save();
+                  ctx.beginPath();
+                  ctx.arc(centerX, centerY, circleRadius, 0, 2 * Math.PI);
+                  ctx.clip();
+                  ctx.drawImage(
+                    logoImg,
+                    centerX - circleRadius,
+                    centerY - circleRadius,
+                    logoSize,
+                    logoSize
+                  );
+                  ctx.restore();
+                };
+              }
+            }
+          }
+        );
+      }, [walletAddress]);
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -18,6 +84,11 @@ export const QrcodeModel = ({ walletAddress, onClose }: { walletAddress: string 
             document.removeEventListener('mousedown', handleClickOutside);
         };
     }, [popupRef1, onClose]);
+
+    const copyAddress = () => {
+        navigator.clipboard.writeText(walletAddress || "");
+        ToastMessage("Copied to clipboard", "success", "");
+    }
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div ref={popupRef1} className="bg-white p-6 rounded-lg shadow-lg text-center w-full max-w-lg">
@@ -32,10 +103,13 @@ export const QrcodeModel = ({ walletAddress, onClose }: { walletAddress: string 
                 </div>
 
                 <div className="flex justify-center mb-4">
-                    <QRCodeCanvas value={walletAddress || ""} size={350} />
+                <canvas ref={canvasRef} />
                 </div>
 
-                <p className="text-gray-700 text-sm break-all">{walletAddress || ""}</p>
+                <p className="text-gray-700 flex justify-center mt-6 mb-2 text-sm break-all">
+                    <img src={copyImage} onClick={copyAddress} alt="copy" className="w-5 h-5 mr-2 cursor-pointer" />
+                    {walletAddress || ""}
+                </p>
             </div>
         </div>
     );

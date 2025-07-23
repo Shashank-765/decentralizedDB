@@ -6,7 +6,7 @@ import axios from "axios";
 import 'react-toastify/dist/ReactToastify.css';
 import ToastMessage from "./toastmessage";
 import CircularLoader from "../CircularLoader/CircularLoader";
-import walletImage from '../assets/pngwing.com.png'
+import walletImage from '../assets/wallet.png'
 import copyImage from '../assets/copy.png'
 import config from "../../config.json"
 import { useWeb3AuthConnect, useWeb3AuthDisconnect, useWeb3AuthUser } from "@web3auth/modal/react";
@@ -31,9 +31,11 @@ function Header() {
   const buttonRef = useRef<HTMLButtonElement>(null);
   const popupRef2 = useRef<HTMLDivElement>(null);
   const popupRef3 = useRef<HTMLDivElement>(null);
+  const popupRef4 = useRef<HTMLDivElement>(null);
   const [profile, setProfile] = useState('');
   const [isValidImage, setIsValidImage] = useState(false);
   const [balanceOpen, setBalanceOpen] = useState(false);
+  const [balanceOpen2, setBalanceOpen2] = useState(false);
   const [isOpenModalPopup, setIsOpenModalPopup] = useState(false);
   const [isOpenModalQrPopup, setIsOpenModalQrPopup] = useState(false);
 
@@ -134,7 +136,7 @@ function Header() {
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (popupRef3.current && !popupRef3.current.contains(event.target as Node)) {
+      if (popupRef4.current && !popupRef4.current.contains(event.target as Node)) {
         setBalanceOpen(false);
       }
     };
@@ -144,6 +146,19 @@ function Header() {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [balanceOpen]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (popupRef3.current && !popupRef3.current.contains(event.target as Node)) {
+        setBalanceOpen2(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [balanceOpen2]);
 
 
   useEffect(() => {
@@ -290,7 +305,7 @@ function Header() {
                       className="text-gray-700 hover:text-gray-800 text-lg w-40 h-11 flex items-center justify-center rounded-full bg-white shadow-md hover:shadow-lg transition cursor-pointer"
                       onClick={() => setBalanceOpen(!balanceOpen)}
                     >
-                      <img src={walletImage} className="w-6 h-6" alt="" />
+                      <img src={walletImage} className="w-5 h-5" alt="" />
                       <p className="ml-2">0.0 ETH</p>
                       <svg
                         className="w-4 h-4 ml-1 text-gray-600"
@@ -304,20 +319,20 @@ function Header() {
                     </div>
                     {balanceOpen && (
                       <div
-                        ref={popupRef3}
+                        ref={popupRef4}
                         className="absolute top-full left-0 mt-1 ml-2 w-36 bg-white rounded-lg shadow-lg z-50 overflow-hidden"
                       >
                         <button
                           onClick={withdrawPopupHandler}
                           className="block w-full text-center px-4 py-2 text-gray-700 hover:bg-gray-100"
                         >
-                          Withdraw
+                          Transfer
                         </button>
                         <button
                           onClick={QrPopupHandler}
                           className="block w-full text-center px-4 py-2 text-gray-600 hover:bg-gray-100"
                         >
-                          Debit
+                          Recieve
                         </button>
                       </div>
                     )}
@@ -340,7 +355,7 @@ function Header() {
                         className="text-gray-700 hover:text-gray-800 text-lg w-40 h-11 flex items-center justify-center rounded-full bg-white shadow-md hover:shadow-lg transition cursor-pointer"
                         onClick={() => setBalanceOpen(!balanceOpen)}
                       >
-                        <img src={walletImage} className="w-6 h-6" alt="" />
+                        <img src={walletImage} className="w-5 h-5" alt="" />
                         <p className="ml-2"> 454.00 ETH
                         </p>
                         <svg
@@ -355,20 +370,20 @@ function Header() {
                       </div>
                       {balanceOpen && (
                         <div
-                          ref={popupRef3}
+                          ref={popupRef4}
                           className="absolute top-full left-0 mt-1 ml-2 w-36 bg-white rounded-lg shadow-lg z-50 overflow-hidden"
                         >
                           <button
                             onClick={withdrawPopupHandler}
                             className="block w-full text-center px-4 py-2 text-gray-700 hover:bg-gray-100"
                           >
-                            Withdraw
+                            Transfer
                           </button>
                           <button
                             onClick={QrPopupHandler}
                             className="block w-full text-center px-4 py-2 text-gray-600 hover:bg-gray-100"
                           >
-                            Debit
+                            Recieve
                           </button>
                         </div>
                       )}
@@ -391,7 +406,7 @@ function Header() {
                           className="text-gray-700 hover:text-gray-800 text-lg w-40 h-11 flex items-center justify-center rounded-full bg-white shadow-md hover:shadow-lg transition cursor-pointer"
                           onClick={() => setBalanceOpen(!balanceOpen)}
                         >
-                          <img src={walletImage} className="w-6 h-6" alt="" />
+                          <img src={walletImage} className="w-5 h-5" alt="" />
                           <p className="ml-2">0.0 ETH</p>
                           <svg
                             className="w-4 h-4 ml-1 text-gray-600"
@@ -406,20 +421,20 @@ function Header() {
 
                         {balanceOpen && (
                           <div
-                            ref={popupRef3}
+                            ref={popupRef4}
                             className="absolute top-full left-0 mt-1 ml-2 w-36 bg-white rounded-lg shadow-lg z-50 overflow-hidden"
                           >
                             <button
                               onClick={withdrawPopupHandler}
                               className="block w-full text-center px-4 py-2 text-gray-700 hover:bg-gray-100"
                             >
-                              Withdraw
+                              Transfer
                             </button>
                             <button
                               onClick={QrPopupHandler}
                               className="block w-full text-center px-4 py-2 text-gray-600 hover:bg-gray-100"
                             >
-                              Debit
+                              Recieve
                             </button>
                           </div>
                         )}
@@ -445,9 +460,9 @@ function Header() {
                     ) : (
                       <>
                         <div className="flex items-space-around justify-between w-56">
-                          <li className="text-gray-700 hover:text-gray-800 text-lg w-40 h-11 flex items-center justify-center rounded-full bg-white shadow-md hover:shadow-lg transition">
+                          <li className="text-gray-700 text-lg w-40 h-11 flex items-center justify-center border border-gray-200 rounded-lg transition">
                             <img src={copyImage} className="w-5 h-5 cursor-pointer" onClick={() => copyAddress(address)} alt="" />
-                            <p className="ml-2">{address ? address?.slice(0, 4) + "..." + address?.slice(-4) : "wallet address"}</p>
+                            <p className="ml-2 text-center font-bold">{address ? address?.slice(0, 4) + "..." + address?.slice(-4) : "wallet address"}</p>
                           </li>
                           <div className="relative inline-block text-left -mr-2">
                             <button
@@ -514,35 +529,156 @@ function Header() {
             <li onClick={() => { setMenuOpen(!menuOpen) }}><Link to="/home" className="mobile-nav-link text-gray-700 hover:text-gray-800 text-lg w-32 h-11 flex items-center justify-center rounded-full bg-white shadow-md hover:shadow-lg transition">Home</Link></li>
             {user ? (
               user.userType === "User" ? (
-                <li>
-                  <Link
-                    to="/userDashboard"
-                    onClick={() => setMenuOpen(!menuOpen)}
-                    className="mobile-nav-link text-gray-700 hover:text-gray-800 text-lg w-32 h-11 flex items-center justify-center rounded-full bg-white shadow-md hover:shadow-lg transition"
-                  >
-                    Dashboard
-                  </Link>
-                </li>
+                <>
+                  <li>
+                    <Link
+                      to="/userDashboard"
+                      onClick={() => setMenuOpen(!menuOpen)}
+                      className="mobile-nav-link text-gray-700 hover:text-gray-800 text-lg w-32 h-11 flex items-center justify-center rounded-full bg-white shadow-md hover:shadow-lg transition"
+                    >
+                      Dashboard
+                    </Link>
+                  </li>
+                  <li className="relative">
+                    <div
+                      className="text-gray-700 hover:text-gray-800 text-lg w-40 h-11 flex items-center justify-center rounded-full bg-white shadow-md hover:shadow-lg transition cursor-pointer"
+                      onClick={() => setBalanceOpen2(!balanceOpen2)}
+                    >
+                      <img src={walletImage} className="w-5 h-5" alt="" />
+                      <p className="ml-2">0.0 ETH</p>
+                      <svg
+                        className="w-4 h-4 ml-1 text-gray-600"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        viewBox="0 0 24 24"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </div>
+                    {balanceOpen2 && (
+                      <div
+                        ref={popupRef3}
+                        className="absolute top-full left-0 mt-1 ml-2 w-36 bg-white rounded-lg shadow-lg z-50 overflow-hidden"
+                      >
+                        <button
+                          onClick={withdrawPopupHandler}
+                          className="block w-full text-center px-4 py-2 text-gray-700 hover:bg-gray-100"
+                        >
+                          Transfer
+                        </button>
+                        <button
+                          onClick={QrPopupHandler}
+                          className="block w-full text-center px-4 py-2 text-gray-600 hover:bg-gray-100"
+                        >
+                          Recieve
+                        </button>
+                      </div>
+                    )}
+                  </li>
+                </>
               ) : user.userType === "Admin" ? (
-                <li>
-                  <Link
-                    to="/adminDashboard"
-                    onClick={() => setMenuOpen(!menuOpen)}
-                    className="mobile-nav-link text-gray-700 hover:text-gray-800 text-lg w-32 h-11 flex items-center justify-center rounded-full bg-white shadow-md hover:shadow-lg transition"
-                  >
-                    Dashboard
-                  </Link>
-                </li>
+                <>
+                  <li>
+                    <Link
+                      to="/adminDashboard"
+                      onClick={() => setMenuOpen(!menuOpen)}
+                      className="mobile-nav-link text-gray-700 hover:text-gray-800 text-lg w-32 h-11 flex items-center justify-center rounded-full bg-white shadow-md hover:shadow-lg transition"
+                    >
+                      Dashboard
+                    </Link>
+                  </li>
+                  <li className="relative">
+                    <div
+                      className="text-gray-700 hover:text-gray-800 text-lg w-40 h-11 flex items-center justify-center rounded-full bg-white shadow-md hover:shadow-lg transition cursor-pointer"
+                      onClick={() => setBalanceOpen2(!balanceOpen2)}
+                    >
+                      <img src={walletImage} className="w-5 h-5" alt="" />
+                      <p className="ml-2"> 454.00 ETH
+                      </p>
+                      <svg
+                        className="w-4 h-4 ml-1 text-gray-600"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        viewBox="0 0 24 24"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </div>
+                    {balanceOpen2 && (
+                      <div
+                        ref={popupRef3}
+                        className="absolute top-full left-0 mt-1 ml-2 w-36 bg-white rounded-lg shadow-lg z-50 overflow-hidden"
+                      >
+                        <button
+                          onClick={withdrawPopupHandler}
+                          className="block w-full text-center px-4 py-2 text-gray-700 hover:bg-gray-100"
+                        >
+                          Transfer
+                        </button>
+                        <button
+                          onClick={QrPopupHandler}
+                          className="block w-full text-center px-4 py-2 text-gray-600 hover:bg-gray-100"
+                        >
+                          Recieve
+                        </button>
+                      </div>
+                    )}
+                  </li>
+                </>
               ) : user.userType === "SuperAdmin" ? (
-                <li>
-                  <Link
-                    to="/superadmin"
-                    onClick={() => setMenuOpen(!menuOpen)}
-                    className="mobile-nav-link text-gray-700 hover:text-gray-800 text-lg w-32 h-11 flex items-center justify-center rounded-full bg-white shadow-md hover:shadow-lg transition"
-                  >
-                    Dashboard
-                  </Link>
-                </li>
+                <>
+
+                  <li>
+                    <Link
+                      to="/superadmin"
+                      onClick={() => setMenuOpen(!menuOpen)}
+                      className="mobile-nav-link text-gray-700 hover:text-gray-800 text-lg w-32 h-11 flex items-center justify-center rounded-full bg-white shadow-md hover:shadow-lg transition"
+                    >
+                      Dashboard
+                    </Link>
+                  </li>
+                  <li className="relative">
+                    <div
+                      className="text-gray-700 hover:text-gray-800 text-lg w-40 h-11 flex items-center justify-center rounded-full bg-white shadow-md hover:shadow-lg transition cursor-pointer"
+                      onClick={() => setBalanceOpen2(!balanceOpen2)}
+                    >
+                      <img src={walletImage} className="w-5 h-5" alt="" />
+                      <p className="ml-2">0.0 ETH</p>
+                      <svg
+                        className="w-4 h-4 ml-1 text-gray-600"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        viewBox="0 0 24 24"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </div>
+
+                    {balanceOpen2 && (
+                      <div
+                        ref={popupRef3}
+                        className="absolute top-full left-0 mt-1 ml-2 w-36 bg-white rounded-lg shadow-lg z-50 overflow-hidden"
+                      >
+                        <button
+                          onClick={withdrawPopupHandler}
+                          className="block w-full text-center px-4 py-2 text-gray-700 hover:bg-gray-100"
+                        >
+                          Transfer
+                        </button>
+                        <button
+                          onClick={QrPopupHandler}
+                          className="block w-full text-center px-4 py-2 text-gray-600 hover:bg-gray-100"
+                        >
+                          Recieve
+                        </button>
+                      </div>
+                    )}
+                  </li>
+                </>
+
               ) : null
             ) : null}
 
@@ -598,6 +734,7 @@ function Header() {
           <QrcodeModel
             onClose={() => setIsOpenModalQrPopup(false)}
             walletAddress={address}
+            logo={isValidImage ? profile : profilelogo}
           />
         </>
       )}
