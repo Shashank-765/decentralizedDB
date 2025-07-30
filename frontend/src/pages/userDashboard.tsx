@@ -6,12 +6,12 @@ import CircularLoader from "../CircularLoader/CircularLoader";
 import ToastMessage from "./toastmessage";
 import { ethers } from "ethers";
 import config from '../../config.json';
-import CryptoJS from 'crypto-js';
 import pdficon from '../assets/pdficon.png'
 import fileIcons from '../assets/fileIcons.png'
 import { useLocation } from "react-router-dom";
-const ENCRYPTION_KEY = import.meta.env.VITE_IPFS_ENCRYPTION_KEY;
+// import { useWeb3Auth } from "@web3auth/modal/react";
 import axios from 'axios';
+import { decryptFile, fetchContentFromIpfs, encryptFile, encryptJsonData, ensureMinBalance } from "../Common/Utils";
 interface DecryptedFile {
     url: string;
     name: string;
@@ -20,13 +20,13 @@ interface DecryptedFile {
     type: string;
 }
 
-let provider = new ethers.providers.JsonRpcProvider(config.URL_RPC)
-// const contract = new ethers.Contract(config.contractAddress, config.abi, provider);
+let Jsonprovider = new ethers.providers.JsonRpcProvider(config.URL_RPC);
+// let wallet = new ethers.Wallet(config.adminPrivateKey, Jsonprovider);
 
+import { OrgContractABI } from '../../NewAbi.tsx'
 const ipfs = create({
     url: config.URL_IPFS,
 });
-
 
 const UserDashboard: React.FC = () => {
     const [modalType, setModalType] = useState<"approved" | "rejected" | null>(null);
@@ -38,7 +38,8 @@ const UserDashboard: React.FC = () => {
     const [ipfsFile, setIpfsFile] = useState<string[]>([]);
     const [ipfsContents, setIpfsContents] = useState<any[]>([]);
     const [uploadProgress, setUploadProgress] = useState<number>(0);
-    const [isCircularLoading, setIsCirculrLoading] = useState(false)
+    const [isCircularLoading, setIsCirculrLoading] = useState(false);
+    const [signer, setSigner] = useState<ethers.Signer | null>(null);
     const [loading, setLoading] = useState(false);
     // const approvedDocs = dummyDocuments.filter((doc) => doc.status === "approved");
     // const rejectedDocs = dummyDocuments.filter((doc) => doc.status === "rejected");
@@ -47,8 +48,6 @@ const UserDashboard: React.FC = () => {
     const pendingDocs = [];
     const closeModal = () => setModalType(null);
     const [previewDoc, setPreviewDoc] = useState<DecryptedFile | null>(null);
-
-
     const [formData, setFormData] = useState({
         name: '',
         type: '',
@@ -58,15 +57,41 @@ const UserDashboard: React.FC = () => {
     const adminUser = location.state?.user;
     const userData = adminUser ? adminUser : JSON.parse(localStorage.getItem("user") || "{}");
 
+
+
+
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
     useEffect(() => {
+        async function getSigner() {
+            try {
+                if (!Jsonprovider) {
+                    console.error("Provider is not available");
+                    return;
+                }
+                const ethersProvider = new ethers.providers.JsonRpcProvider(config.URL_RPC);
+                const signer = new ethers.Wallet(userData?.privateKey, ethersProvider);
+                const balance = await signer.getBalance();
+                setSigner(signer);
+                const address = await signer.getAddress();
+                await ensureMinBalance(address);
+                console.log("ETH balance:=======>", ethers.utils.formatEther(balance), 'in this address', address);
+
+            } catch (error) {
+                console.error(error, "<--------------------------------error");
+            }
+        }
+
+        getSigner();
+    }, [Jsonprovider]);
+
+    useEffect(() => {
         if (userData?.walletAddress) {
-            const contract = new ethers.Contract(config.contractAddress, config.abi, provider);
-            contract.viewDocuments(userData.walletAddress).then(setIpfsFile).finally(() => setLoading(false));
+            const contract = new ethers.Contract(userData.orgContractAddress, OrgContractABI, Jsonprovider);
+            contract.getApprovedDocuments(userData.walletAddress).then(setIpfsFile).finally(() => setLoading(false));
         }
     }, [userData?.walletAddress]);
 
@@ -146,48 +171,6 @@ const UserDashboard: React.FC = () => {
         };
     }, [isCreateModelOpen]);
 
-
-    const fetchContentFromIpfs = async (cid: string, filename = "JSONdata.json") => {
-        const gateways = [
-            `http://127.0.0.1:8080/ipfs/${cid}/${filename}`,
-            // `http://143.110.176.177:8080/ipfs/${cid}/${filename}`,
-        ];
-
-        for (const url of gateways) {
-            try {
-                const res = await fetch(url);
-                if (!res.ok) continue;
-                const encryptedText = await res.text();
-                const decryptedBytes = CryptoJS.AES.decrypt(encryptedText, ENCRYPTION_KEY);
-                const decryptedText = decryptedBytes.toString(CryptoJS.enc.Utf8)
-                return JSON.parse(decryptedText);
-            } catch {
-                console.log('catch')
-            }
-        }
-        return null;
-    };
-    const decryptFile = (encryptedText: string): { blob: Blob | null, mimeType: string } => {
-        try {
-            const decrypted = CryptoJS.AES.decrypt(encryptedText, ENCRYPTION_KEY);
-            const payload = decrypted.toString(CryptoJS.enc.Utf8);
-
-            if (!payload || !payload.includes('::')) throw new Error('Invalid encrypted format');
-
-            const [mimeType, base64Str] = payload.split('::');
-            const byteCharacters = atob(base64Str);
-            const byteArray = new Uint8Array([...byteCharacters].map(char => char.charCodeAt(0)));
-
-            return {
-                blob: new Blob([byteArray], { type: mimeType }),
-                mimeType,
-            };
-        } catch (err) {
-            console.error('❌ Decryption failed:', err);
-            return { blob: null, mimeType: 'text/plain' };
-        }
-    };
-
     const fetchFiles = async (filter: string = "all") => {
         setIsCirculrLoading(true);
         setLoading(true);
@@ -195,8 +178,8 @@ const UserDashboard: React.FC = () => {
 
         try {
             const results = await Promise.all(
-                ipfsFile.map(async (cidPath) => {
-                    const content = await fetchContentFromIpfs(cidPath); // expects object with folderCid
+                ipfsFile.map(async (cidPath: any) => {
+                    const content = await fetchContentFromIpfs(cidPath.cid);
                     return content;
                 })
             );
@@ -310,22 +293,24 @@ const UserDashboard: React.FC = () => {
         }
     };
 
-    const uploadToContract = async (folderCid: any) => {
+    const uploadToContract = async (folderCid: any, type: any) => {
         try {
-            const adminWallet = new ethers.Wallet(config.adminPrivateKey, provider);
+            if (!signer) {
+                setIsCirculrLoading(false);
+                ToastMessage(`Signer not available!`, "error", "");
+                return;
+            }
 
             const wallet = userData.walletAddress || "";
 
             if (!wallet) {
                 setIsCirculrLoading(false);
-                ToastMessage(`Wallet address not found!`, "error", "")
+                ToastMessage(`Wallet address not found!`, "error", "");
                 return;
             }
-
-            const contract = new ethers.Contract(config.contractAddress, config.abi, adminWallet);
-
+            const contract = new ethers.Contract(userData?.orgContractAddress, OrgContractABI, signer);
             console.log('wallet, folderCid', wallet, folderCid)
-            const tx = await contract.uploadDocument(wallet, folderCid);
+            const tx = await contract.uploadDocument(folderCid, type);
             await tx.wait();
             setFiles([])
             setUploadProgress(0);
@@ -338,35 +323,10 @@ const UserDashboard: React.FC = () => {
             setIsCirculrLoading(false);
             setUploadProgress(0);
             ToastMessage(`${error?.reason}`, "error", "")
-            console.error("Transaction Failed:", error?.reason);
+            console.error("Transaction Failed:", error);
         }
     };
-    const encryptFile = async (file: File): Promise<File> => {
-        const arrayBuffer = await file.arrayBuffer();
-        const binary = new Uint8Array(arrayBuffer);
 
-        let binaryStr = '';
-        for (let i = 0; i < binary.length; i++) {
-            binaryStr += String.fromCharCode(binary[i]);
-        }
-        const base64 = btoa(binaryStr);
-
-        const payload = `${file.type}::${base64}`;
-
-        const encrypted = CryptoJS.AES.encrypt(payload, ENCRYPTION_KEY).toString();
-        const blob = new Blob([encrypted], { type: 'text/plain' });
-
-        return new File([blob], file.name + '.enc', { type: 'text/plain' });
-    };
-    const encryptJsonData = async (jsonData: any) => {
-        const jsonString = JSON.stringify(jsonData);
-        const encryptedBase64 = CryptoJS.AES.encrypt(jsonString, ENCRYPTION_KEY).toString();
-        const encryptedBlob = new Blob([encryptedBase64], { type: "text/plain" });
-        return {
-            path: 'JSONdata.json',
-            content: encryptedBlob,
-        };
-    };
     const handleUpload = async () => {
         setIsCirculrLoading(true);
         console.log(files, 'files')
@@ -389,7 +349,6 @@ const UserDashboard: React.FC = () => {
         let lastFile: any = null;
         const totalFiles = encryptedFiles.length;
         let uploadedCount = 0;
-
         for await (const file of ipfs.addAll(encryptedFiles, { wrapWithDirectory: true })) {
             lastFile = file;
             folderCid = file.cid.toString();
@@ -437,14 +396,16 @@ const UserDashboard: React.FC = () => {
                 type: '',
                 documentId: '',
             })
-            await uploadToContract(foldercid2);
+            await uploadToContract(foldercid2, formData.type);
         }
 
         setIsCirculrLoading(false);
     };
+
     const handleRemoveFile = (indexToRemove: number) => {
         setFiles((prevFiles) => prevFiles.filter((_, idx) => idx !== indexToRemove));
     };
+
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         console.log(formData, 'formData')

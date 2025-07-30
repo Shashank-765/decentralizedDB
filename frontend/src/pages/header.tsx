@@ -9,10 +9,11 @@ import CircularLoader from "../CircularLoader/CircularLoader";
 import walletImage from '../assets/wallet.png'
 import copyImage from '../assets/copy.png'
 import config from "../../config.json"
-import { useWeb3AuthConnect, useWeb3AuthDisconnect, useWeb3AuthUser } from "@web3auth/modal/react";
+import { useWeb3AuthConnect, useWeb3AuthDisconnect, useWeb3AuthUser,useWeb3Auth } from "@web3auth/modal/react";
 import { useAccount } from "wagmi";
 import profilelogo from '../assets/user.png'
 import { WithdrawModal, QrcodeModel } from "./Modals";
+import { ethers } from "ethers";
 
 function Header() {
   const [searchParams] = useSearchParams();
@@ -38,6 +39,28 @@ function Header() {
   const [balanceOpen2, setBalanceOpen2] = useState(false);
   const [isOpenModalPopup, setIsOpenModalPopup] = useState(false);
   const [isOpenModalQrPopup, setIsOpenModalQrPopup] = useState(false);
+  const { provider } = useWeb3Auth();
+
+    useEffect(()=>{
+      async function getPrivateKey(){
+        try {
+          if(!provider){
+          return;
+        }
+        const ethersProvider = new ethers.providers.Web3Provider(provider);
+        
+const signer = await ethersProvider.getSigner();
+signer.getAddress().then((address) => {
+  console.log(address,"<--------------------------------address");
+})  
+      }
+      catch (error) {
+        console.log(error,"<--------------------------------error");
+      }
+      }
+      getPrivateKey();
+    },[])
+
 
   useEffect(() => {
     if (user?.profileImage) {
@@ -186,7 +209,7 @@ function Header() {
       const loginUser = async () => {
         try {
           const res = await axios.post(`${config.URL_BACKEND}api/auth/login`, {
-            walletAddress: address?.toString() || "",
+            // walletAddress: address?.toString() || "",
             email: userInfo?.email || '',
             name: userInfo?.name || '',
           });

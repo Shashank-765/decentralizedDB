@@ -7,6 +7,26 @@ import axios from "axios";
 import ToastMessage from "./toastmessage";
 import blockIcon from '../assets/prohibition.png';
 import unblock from '../assets/unlock.png';
+import { SuperAdminABI, OrgContractABI } from '../../NewAbi.tsx'
+import { ethers } from "ethers";
+const provider = new ethers.providers.JsonRpcProvider(config.URL_RPC);
+const adminWallet = new ethers.Wallet(config.adminPrivateKey, provider);
+const SuperAdminContract = new ethers.Contract(config.contractAddress, SuperAdminABI, adminWallet);
+
+try {
+  const [admins, balances] = await SuperAdminContract.getAllOrgAdminBalances();
+  admins.forEach((admin: any, idx: any) => {
+    console.log(`Admin: ${admin} - Balance: ${ethers.utils.formatEther(balances[idx])} MATIC`);
+  });
+}
+catch (error) {
+  console.log(error)
+}
+let userData = JSON.parse(localStorage.getItem("user") || "{}");
+let orgcontract: any;
+if (userData?.orgContractAddress) {
+  orgcontract = new ethers.Contract(userData?.orgContractAddress, OrgContractABI, adminWallet);
+}
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, Tooltip, Legend, CartesianGrid, ResponsiveContainer } from 'recharts';
 
 type Document = {
@@ -115,7 +135,7 @@ const SuperAdminDashboard: React.FC = () => {
   const modalRef2 = useRef<HTMLDivElement>(null);
   const [activeTab, setActiveTab] = useState("Dashboard");
   const [isCreateModelOpen, setIsCreateModelOpen] = useState(false);
-  const [dataToSend, setdataToSend] = useState({ name: "", email: "" })
+  const [dataToSend, setdataToSend] = useState({ name: "", email: "", organization: "", orgContractAddress: "" })
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [allAdmins, setAllAdmins] = useState<Admin[]>([]);
   const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff8042'];
@@ -169,13 +189,52 @@ const SuperAdminDashboard: React.FC = () => {
 
   const createAdminHandler = async () => {
     try {
-      const response = await axios.post(`${config.URL_BACKEND}api/auth/createAdmin`, {
-        name: dataToSend.name,
-        email: dataToSend.email,
-      });
-      if (response.status === 201) {
-        setIsCreateModelOpen(false);
-        setdataToSend({ name: "", email: "" })
+      if (!dataToSend.name || !dataToSend.email || !dataToSend.organization) {
+        if (!dataToSend.name) {
+          ToastMessage("Please fill name", "error", "");
+        }
+        if (!dataToSend.email) {
+          ToastMessage("Please fill email", "error", "");
+        }
+        if (!dataToSend.organization) {
+          ToastMessage("Please fill organization", "error", "");
+        }
+        return;
+      }
+      const contractResponse = await SuperAdminContract.createOrganization(localUserData?.walletAddress, dataToSend.organization, { value: ethers.utils.parseEther("0.1") }
+      );
+      const receipt = await contractResponse.wait();
+      setIsCreateModelOpen(false);
+
+      const getAllOrgs = await SuperAdminContract.getAllOrgs();
+      console.log(getAllOrgs, "getAllOrgs")
+
+      if (receipt.status === 1) {
+        try {
+          const response = await axios.post(`${config.URL_BACKEND}api/auth/createAdmin`, {
+            name: dataToSend.name,
+            email: dataToSend.email,
+            organization: dataToSend.organization,
+            userType: "Admin",
+            orgContractAddress: getAllOrgs[getAllOrgs.length - 1].orgContractAddress
+          },
+            {
+              headers: { _token: localUserData?.token }
+            }
+          );
+          console.log(response, 'this is response created==========>');
+          if (response.status === 201) {
+            setIsCreateModelOpen(false);
+            ToastMessage("Admin Created Successfully", "success", "");
+            fetchAllAdmins();
+            setdataToSend({ name: "", email: "", organization: "", orgContractAddress: "" })
+          }
+        } catch (error) {
+          console.log(error, 'this is error created==========>');
+          ToastMessage("Admin Created Failed", "error", "");
+          return;
+        }
+
       }
     } catch (error) {
       console.log(error);
@@ -184,11 +243,14 @@ const SuperAdminDashboard: React.FC = () => {
   };
 
   const fetchAllUser = async () => {
+    const user = await orgcontract.getAllUsers();
 
     try {
-      const response = await axios.get(`${config.URL_BACKEND}api/auth/getAllUsers`);
-      if (response.status === 200) {
-        setAllUsers(response.data.user);
+      for (let i = 0; i < user.length; i++) {
+        const response = await axios.get(`${config.URL_BACKEND}api/auth/userListByWalletAddress?walletAddress=${user[i]}`);
+        if (response.status === 200) {
+          setAllUsers((prev: any) => [...prev, response.data.user]);
+        }
       }
     } catch (error) {
       console.log(error);
@@ -652,17 +714,52 @@ const SuperAdminDashboard: React.FC = () => {
                     <label className="block text-gray-700 font-semibold mb-2">Email</label>
                     <input type="email" placeholder="Email" value={dataToSend.email} onChange={(e) => setdataToSend({ ...dataToSend, email: e.target.value })} className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-indigo-500" required />
                   </div>
-                  {/* <div className="mb-4">
-                    <label className="block text-gray-700 font-semibold mb-2">Password</label>
-                    <input type="password" placeholder="Password" className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-indigo-500" required />
-                  </div> */}
-                  <button type="submit" className="bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2 rounded transition">Create Admin</button>
+                  <div className="mb-4">
+                    <label className="block text-gray-700 font-semibold mb-2">Organization</label>
+                    {/* <input type="text" placeholder="Organization" value={dataToSend.organization} onChange={(e) => setdataToSend({ ...dataToSend, organization: e.target.value })} className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-indigo-500" required /> */}
+                    <div className="relative  w-full inline-block">
+                      <select
+                        onChange={(e) => setdataToSend({ ...dataToSend, organization: e.target.value })}
+                        className="appearance-none w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-indigo-500"
+                      >
+                        <option value="" disabled selected hidden>Select Organization...</option>
+                        <option value="uid">Aadhaar Card</option>
+                        <option value="pan">PAN Card</option>
+                        <option value="passport">Passport</option>
+                        <option value="voter_id">Voter ID</option>
+                        <option value="driving_license">Driving License</option>
+                        <option value="ration_card">Ration Card</option>
+                        <option value="birth_certificate">Birth Certificate</option>
+                        <option value="income_certificate">Income Certificate</option>
+                        <option value="caste_certificate">Caste Certificate</option>
+                        <option value="residence_proof">Residence Proof</option>
+                        <option value="electricity_bill">Electricity Bill</option>
+                        <option value="bank_passbook">Bank Passbook</option>
+                      </select>
+
+                      {/* Custom arrow icon */}
+                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4">
+                        <svg
+                          className="w-4 h-4 text-gray-600"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          viewBox="0 0 24 24"
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex justify-center">
+                    <button type="submit" className="w-1/2 self-center text-center bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded transition">Create Admin</button>
+                  </div>
                 </form>
-                <div className="mt-6 text-right">
+                {/* <div className="mt-6 text-right">
                   <button onClick={() => setIsCreateModelOpen(false)} className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded transition">
                     Close
                   </button>
-                </div>
+                </div> */}
               </div>
             </div>
           )

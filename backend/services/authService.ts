@@ -2,14 +2,14 @@ import User, { IUser } from "../models/User";
 import { generateAccessToken } from '../Authorization/Auth'
 import DocumentCidModel, { DocumentCid } from "../models/documentCid";
 
-export const createAdmin = async (name: string, email: string): Promise<IUser> => {
+export const createAdmin = async (name: string, email: string,orgContractAddress:string,organization:string): Promise<IUser> => {
     const userExists = await User.findOne({ email });
     if (userExists) {
         throw new Error("User already exists");
     }
     const token = await generateAccessToken(email);
     const user = new User({
-        name, email, userType: "Admin", token
+        name, email, userType: "Admin", token,orgContractAddress,organization
     });
     await user.save();
 
@@ -45,8 +45,8 @@ export const loginUser = async (email: string, walletAddress: string, name: stri
         user = userExists;
 
         if (!userExists.walletAddress) {
-            userExists.walletAddress = walletAddress;
-            await userExists.save();
+            // userExists.walletAddress = walletAddress;
+            // await userExists.save();
         }
     } else {
         user = await User.create({
@@ -179,6 +179,11 @@ export const getGraphData = async (
     }
 };
 
+export const userListByWalletAddress = async (walletAddress: string): Promise<IUser | null> => {
+    const user = await User.findOne({ walletAddress });
+    return user;
+}
+
 
 export const fakeDataToStore = async (): Promise<IUser[]> => {
 
@@ -186,7 +191,7 @@ export const fakeDataToStore = async (): Promise<IUser[]> => {
         {
             "name": "Test User 1",
             "email": "user1@example.com",
-            "userType": "SuperAdmin",
+            "userType": "User",
             "documentType": "",
             "walletAddress": "0x1111111111111111111111111111111111111111",
             "isBlocked": false,
@@ -195,7 +200,7 @@ export const fakeDataToStore = async (): Promise<IUser[]> => {
         {
             "name": "Test User 2",
             "email": "user2@example.com",
-            "userType": "SuperAdmin",
+            "userType": "User",
             "documentType": "",
             "walletAddress": "0x2222222222222222222222222222222222222222",
             "isBlocked": false,
@@ -204,7 +209,7 @@ export const fakeDataToStore = async (): Promise<IUser[]> => {
         {
             "name": "Test User 3",
             "email": "user3@example.com",
-            "userType": "SuperAdmin",
+            "userType": "User",
             "documentType": "",
             "walletAddress": "0x3333333333333333333333333333333333333333",
             "isBlocked": false,
@@ -213,7 +218,7 @@ export const fakeDataToStore = async (): Promise<IUser[]> => {
         {
             "name": "Test User 4",
             "email": "user4@example.com",
-            "userType": "SuperAdmin",
+            "userType": "User",
             "documentType": "",
             "walletAddress": "0x4444444444444444444444444444444444444444",
             "isBlocked": false,
@@ -222,7 +227,7 @@ export const fakeDataToStore = async (): Promise<IUser[]> => {
         {
             "name": "Test User 5",
             "email": "user5@example.com",
-            "userType": "SuperAdmin",
+            "userType": "User",
             "documentType": "",
             "walletAddress": "0x5555555555555555555555555555555555555555",
             "isBlocked": false,
@@ -231,7 +236,7 @@ export const fakeDataToStore = async (): Promise<IUser[]> => {
         {
             "name": "Test User 6",
             "email": "user6@example.com",
-            "userType": "SuperAdmin",
+            "userType": "User",
             "documentType": "",
             "walletAddress": "0x6666666666666666666666666666666666666666",
             "isBlocked": false,
@@ -240,7 +245,7 @@ export const fakeDataToStore = async (): Promise<IUser[]> => {
         {
             "name": "Test User 7",
             "email": "user7@example.com",
-            "userType": "SuperAdmin",
+            "userType": "User",
             "documentType": "",
             "walletAddress": "0x7777777777777777777777777777777777777777",
             "isBlocked": false,
@@ -249,7 +254,7 @@ export const fakeDataToStore = async (): Promise<IUser[]> => {
         {
             "name": "Test User 8",
             "email": "user8@example.com",
-            "userType": "SuperAdmin",
+            "userType": "User",
             "documentType": "",
             "walletAddress": "0x8888888888888888888888888888888888888888",
             "isBlocked": false,
@@ -258,7 +263,7 @@ export const fakeDataToStore = async (): Promise<IUser[]> => {
         {
             "name": "Test User 9",
             "email": "user9@example.com",
-            "userType": "SuperAdmin",
+            "userType": "User",
             "documentType": "",
             "walletAddress": "0x9999999999999999999999999999999999999999",
             "isBlocked": false,
@@ -267,7 +272,7 @@ export const fakeDataToStore = async (): Promise<IUser[]> => {
         {
             "name": "Test User 10",
             "email": "user10@example.com",
-            "userType": "SuperAdmin",
+            "userType": "User",
             "documentType": "",
             "walletAddress": "0xAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
             "isBlocked": false,
@@ -276,7 +281,7 @@ export const fakeDataToStore = async (): Promise<IUser[]> => {
         {
             "name": "Test User 11",
             "email": "user11@example.com",
-            "userType": "SuperAdmin",
+            "userType": "User",
             "documentType": "",
             "walletAddress": "0xBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB",
             "isBlocked": false,
@@ -285,7 +290,7 @@ export const fakeDataToStore = async (): Promise<IUser[]> => {
         {
             "name": "Test User 12",
             "email": "user12@example.com",
-            "userType": "SuperAdmin",
+            "userType": "User",
             "documentType": "",
             "walletAddress": "0xCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC",
             "isBlocked": false,
@@ -294,7 +299,7 @@ export const fakeDataToStore = async (): Promise<IUser[]> => {
         {
             "name": "Test User 13",
             "email": "user13@example.com",
-            "userType": "SuperAdmin",
+            "userType": "User",
             "documentType": "",
             "walletAddress": "0xDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD",
             "isBlocked": false,
@@ -303,7 +308,7 @@ export const fakeDataToStore = async (): Promise<IUser[]> => {
         {
             "name": "Test User 14",
             "email": "user14@example.com",
-            "userType": "SuperAdmin",
+            "userType": "User",
             "documentType": "",
             "walletAddress": "0xEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE",
             "isBlocked": false,
@@ -312,7 +317,7 @@ export const fakeDataToStore = async (): Promise<IUser[]> => {
         {
             "name": "Test User 15",
             "email": "user15@example.com",
-            "userType": "SuperAdmin",
+            "userType": "User",
             "documentType": "",
             "walletAddress": "0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
             "isBlocked": false,
@@ -321,7 +326,7 @@ export const fakeDataToStore = async (): Promise<IUser[]> => {
         {
             "name": "Test User 16",
             "email": "user16@example.com",
-            "userType": "SuperAdmin",
+            "userType": "User",
             "documentType": "",
             "walletAddress": "0x1600000000000000000000000000000000000000",
             "isBlocked": false,
@@ -330,7 +335,7 @@ export const fakeDataToStore = async (): Promise<IUser[]> => {
         {
             "name": "Test User 17",
             "email": "user17@example.com",
-            "userType": "SuperAdmin",
+            "userType": "User",
             "documentType": "",
             "walletAddress": "0x1700000000000000000000000000000000000000",
             "isBlocked": false,
@@ -339,7 +344,7 @@ export const fakeDataToStore = async (): Promise<IUser[]> => {
         {
             "name": "Test User 18",
             "email": "user18@example.com",
-            "userType": "SuperAdmin",
+            "userType": "User",
             "documentType": "",
             "walletAddress": "0x1800000000000000000000000000000000000000",
             "isBlocked": false,
@@ -348,7 +353,7 @@ export const fakeDataToStore = async (): Promise<IUser[]> => {
         {
             "name": "Test User 19",
             "email": "user19@example.com",
-            "userType": "SuperAdmin",
+            "userType": "User",
             "documentType": "",
             "walletAddress": "0x1900000000000000000000000000000000000000",
             "isBlocked": false,
@@ -357,7 +362,7 @@ export const fakeDataToStore = async (): Promise<IUser[]> => {
         {
             "name": "Test User 20",
             "email": "user20@example.com",
-            "userType": "SuperAdmin",
+            "userType": "User",
             "documentType": "",
             "walletAddress": "0x2000000000000000000000000000000000000000",
             "isBlocked": false,
@@ -366,7 +371,7 @@ export const fakeDataToStore = async (): Promise<IUser[]> => {
         {
             "name": "Test User 21",
             "email": "user21@example.com",
-            "userType": "SuperAdmin",
+            "userType": "User",
             "documentType": "",
             "walletAddress": "0x2100000000000000000000000000000000000000",
             "isBlocked": false,
@@ -375,7 +380,7 @@ export const fakeDataToStore = async (): Promise<IUser[]> => {
         {
             "name": "Test User 22",
             "email": "user22@example.com",
-            "userType": "SuperAdmin",
+            "userType": "User",
             "documentType": "",
             "walletAddress": "0x2200000000000000000000000000000000000000",
             "isBlocked": false,
@@ -384,7 +389,7 @@ export const fakeDataToStore = async (): Promise<IUser[]> => {
         {
             "name": "Test User 23",
             "email": "user23@example.com",
-            "userType": "SuperAdmin",
+            "userType": "User",
             "documentType": "",
             "walletAddress": "0x2300000000000000000000000000000000000000",
             "isBlocked": false,
@@ -393,7 +398,7 @@ export const fakeDataToStore = async (): Promise<IUser[]> => {
         {
             "name": "Test User 24",
             "email": "user24@example.com",
-            "userType": "SuperAdmin",
+            "userType": "User",
             "documentType": "",
             "walletAddress": "0x2400000000000000000000000000000000000000",
             "isBlocked": false,
@@ -402,7 +407,7 @@ export const fakeDataToStore = async (): Promise<IUser[]> => {
         {
             "name": "Test User 25",
             "email": "user25@example.com",
-            "userType": "SuperAdmin",
+            "userType": "User",
             "documentType": "",
             "walletAddress": "0x2500000000000000000000000000000000000000",
             "isBlocked": false,
@@ -411,7 +416,7 @@ export const fakeDataToStore = async (): Promise<IUser[]> => {
         {
             "name": "Test User 26",
             "email": "user26@example.com",
-            "userType": "SuperAdmin",
+            "userType": "User",
             "documentType": "",
             "walletAddress": "0x2600000000000000000000000000000000000000",
             "isBlocked": false,
@@ -420,7 +425,7 @@ export const fakeDataToStore = async (): Promise<IUser[]> => {
         {
             "name": "Test User 27",
             "email": "user27@example.com",
-            "userType": "SuperAdmin",
+            "userType": "User",
             "documentType": "",
             "walletAddress": "0x2700000000000000000000000000000000000000",
             "isBlocked": false,
@@ -429,7 +434,7 @@ export const fakeDataToStore = async (): Promise<IUser[]> => {
         {
             "name": "Test User 28",
             "email": "user28@example.com",
-            "userType": "SuperAdmin",
+            "userType": "User",
             "documentType": "",
             "walletAddress": "0x2800000000000000000000000000000000000000",
             "isBlocked": false,
@@ -438,7 +443,7 @@ export const fakeDataToStore = async (): Promise<IUser[]> => {
         {
             "name": "Test User 29",
             "email": "user29@example.com",
-            "userType": "SuperAdmin",
+            "userType": "User",
             "documentType": "",
             "walletAddress": "0x2900000000000000000000000000000000000000",
             "isBlocked": false,
@@ -447,7 +452,7 @@ export const fakeDataToStore = async (): Promise<IUser[]> => {
         {
             "name": "Test User 30",
             "email": "user30@example.com",
-            "userType": "SuperAdmin",
+            "userType": "User",
             "documentType": "",
             "walletAddress": "0x3000000000000000000000000000000000000000",
             "isBlocked": false,

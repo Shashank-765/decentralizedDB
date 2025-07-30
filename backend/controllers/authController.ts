@@ -5,8 +5,8 @@ import * as authService from "../services/authService";
 
 export const createAdmin = async (req: Request, res: Response) => {
     try {
-        const { name, email } = req.body;
-        const user = await authService.createAdmin(name, email);
+        const { name, email,orgContractAddress,organization } = req.body;
+        const user = await authService.createAdmin(name, email,orgContractAddress,organization);
         res.status(201).json({ message: "User registered successfully", user });
     } catch (error: any) {
         res.status(400).json({ error: error.message });
@@ -130,6 +130,17 @@ export const fakeDataToStore = async (req: Request, res: Response) => {
         res.status(400).json({ error: error.message });
     }
 }
+
+export const userListByWalletAddress = async (req: Request, res: Response) => {
+    try {
+        const { walletAddress } = req.query;
+        const user = await authService.userListByWalletAddress(walletAddress as string);
+        res.status(200).json({ message: "User Fetched successful", user });
+    } catch (error: any) {
+        res.status(400).json({ error: error.message });
+    }
+}
+
 
 
 

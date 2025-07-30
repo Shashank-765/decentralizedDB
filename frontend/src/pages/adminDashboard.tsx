@@ -8,12 +8,16 @@ import ToastMessage from "./toastmessage";
 import blockIcon from '../assets/prohibition.png';
 import unblock from '../assets/unlock.png';
 import { useLocation, useNavigate } from "react-router-dom";
-import CryptoJS from 'crypto-js';
 import { create } from 'ipfs-http-client';
 const provider = new ethers.providers.JsonRpcProvider(config.URL_RPC);
 const adminWallet = new ethers.Wallet(config.adminPrivateKey, provider);
-const contract = new ethers.Contract(config.contractAddress, config.abi, adminWallet);
-const ENCRYPTION_KEY = import.meta.env.VITE_IPFS_ENCRYPTION_KEY;
+import { OrgContractABI } from '../../NewAbi.tsx'
+import { fetchContentFromIpfs, decryptFile } from '../Common/Utils';
+const UserData = JSON.parse(localStorage.getItem("user") || "{}");
+let contract: any;
+if (UserData?.orgContractAddress) {
+  contract = new ethers.Contract(UserData?.orgContractAddress, OrgContractABI, adminWallet);
+}
 
 interface DecryptedFile {
   documentName: string;
@@ -23,9 +27,8 @@ interface DecryptedFile {
   approved: boolean;
   folderName: string;
   type: string;
-  cid:string
+  cid: string
 }
-
 
 const ipfs = create({
   url: config.URL_IPFS,
@@ -65,62 +68,23 @@ export default function UserDashboard() {
   const fetchUsers = async () => {
     try {
       setCircularLoading(true);
-      const response = await axios.get(`${config.URL_BACKEND}api/auth/userList`);
+      const response = await contract.getAllUsers();
       const userData = [];
-      for (let i = 0; i < response.data.user.length; i++) {
-        const walletAddress = response.data.user[i].walletAddress;
-        const documents = await contract.viewAllDocuments(walletAddress);
-
-        const fetchContentFromIpfs = async (cid: string, filename = "JSONdata.json") => {
-          const gateways = [
-            `http://127.0.0.1:8080/ipfs/${cid}/${filename}`
-          ];
-
-          for (const url of gateways) {
-            try {
-              const res = await fetch(url);
-              if (!res.ok) continue;
-              const encryptedText = await res.text();
-              const decryptedBytes = CryptoJS.AES.decrypt(encryptedText, ENCRYPTION_KEY);
-              const decryptedText = decryptedBytes.toString(CryptoJS.enc.Utf8)
-              return JSON.parse(decryptedText);
-            } catch {
-              console.log('catch')
-            }
-          }
-          return null;
-        };
-
-        const decryptFile = (encryptedText: string): { blob: Blob | null, mimeType: string } => {
-          try {
-            const decrypted = CryptoJS.AES.decrypt(encryptedText, ENCRYPTION_KEY);
-            const payload = decrypted.toString(CryptoJS.enc.Utf8);
-
-            if (!payload || !payload.includes('::')) throw new Error('Invalid encrypted format');
-
-            const [mimeType, base64Str] = payload.split('::');
-            const byteCharacters = atob(base64Str);
-            const byteArray = new Uint8Array([...byteCharacters].map(char => char.charCodeAt(0)));
-
-            return {
-              blob: new Blob([byteArray], { type: mimeType }),
-              mimeType,
-            };
-          } catch (err) {
-            console.error('Decryption failed:', err);
-            return { blob: null, mimeType: 'text/plain' };
-          }
-        };
+      for (let i = 0; i < response.length; i++) {
+        const walletAddress = response[i];
+        const userwithsetail = await axios.get(`${config.URL_BACKEND}api/auth/userListByWalletAddress?walletAddress=${walletAddress}`);
+        const documents = await contract.getAllDocuments(walletAddress);
+        console.log(documents, "documents form contract")
         try {
           const results = await Promise.all(
             documents.map(async (file: any, index: number) => {
-              let isapproved = file[1];
+              let isapproved = file[3];
               const content = await fetchContentFromIpfs(file[0]);
               return {
                 ...content,
                 index,
                 approved: isapproved,
-                cid:file[0]
+                cid: file[0]
               }
             })
           );
@@ -157,7 +121,7 @@ export default function UserDashboard() {
                       approved: file.approved,
                       folderName: file?.name,
                       type: file?.type,
-                      cid:file.cid
+                      cid: file.cid
                     });
                   }
                 }
@@ -175,16 +139,16 @@ export default function UserDashboard() {
 
         let userFiles = documents.map((doc: any, index: number) => ({
           url: `https://ipfs.io/ipfs/${doc[0]}`,
-          approved: doc[1],
+          approved: doc[3],
           index,
         }));
         const allApproved = userFiles.every((file: any) => file.approved);
         userData.push({
-          id: response.data.user[i]._id,
-          name: response.data.user[i].name,
-          email: response.data.user[i].email,
+          id: userwithsetail.data.user._id,
+          name: userwithsetail.data.user.name,
+          email: userwithsetail.data.user.email,
           walletAddress,
-          isBlocked: response.data.user[i].isBlocked,
+          isBlocked: userwithsetail.data.user.isBlocked,
           files: userFiles.length,
           fileLinks: decryptedDocs,
           status: allApproved ? "Approved" : "Pending",
@@ -203,20 +167,20 @@ export default function UserDashboard() {
     fetchUsers();
   }, []);
 
-  const approve = async (walletAddress: string, index: number,cid:string) => {
+  const approve = async (walletAddress: string, index: number, cid: string) => {
     try {
-      const tx = await contract.verifyDocument(walletAddress, index);
+      const tx = await contract.verifyDocument(walletAddress, index, true);
       await tx.wait();
-        
+
       try {
-        const response = await axios.post(`${config.URL_BACKEND}api/auth/approveDocument`, {cid,approvedBy:localUserData?._id},
+        const response = await axios.post(`${config.URL_BACKEND}api/auth/approveDocument`, { cid, approvedBy: localUserData?._id },
           { headers: { _token: localUserData?.token } }
         );
-        if(response.status === 200){
-            console.log(response.data)
+        if (response.status === 200) {
+          console.log(response.data)
         }
-      } catch (error:any) {
-          console.log(error)
+      } catch (error: any) {
+        console.log(error)
       }
 
       ToastMessage("Document Approved Successfully", "success", tx.hash || "");
@@ -242,7 +206,6 @@ export default function UserDashboard() {
   };
 
   const openModal = (user: any) => {
-    console.log(user,'this is user')
     setSelectedFiles(user.fileLinks);
     setSelectedUser(user.walletAddress);
     setShowModal(true);
@@ -300,7 +263,6 @@ export default function UserDashboard() {
   const navigateUserdahsboard = (user: any) => {
     navigate(`/userDashboard`, { state: { user } });
   };
-  console.log(circularLoading,'this is circular loading')
 
   return (
     <div className="min-h-screen overflow-x-hidden rounded-3xl mx-4 flex">
@@ -362,8 +324,8 @@ export default function UserDashboard() {
                           </tr>
                         </thead>
                         <tbody className="text-gray-700">
-                          {currentUsers.map((user) => (
-                            <tr key={user.id} className="border-b border-gray-200 hover:bg-gray-50 transition">
+                          {currentUsers.map((user, i) => (
+                            <tr key={i} className="border-b border-gray-200 hover:bg-gray-50 transition">
                               <td className="py-4 px-6">{user.name}</td>
                               <td className="py-4 px-6">{user.email}</td>
                               <td className="py-4 px-6 text-center">{user.files}</td>
@@ -435,7 +397,6 @@ export default function UserDashboard() {
                     {selectedFiles.map((file, index) => (
                       <div key={index} className="flex flex-col items-center bg-gray-50 p-4 rounded-lg shadow">
                         <a href={file.url} target="_blank" rel="noopener noreferrer">
-                          {/* {console.log(file.url,'this is url')} */}
                           <img
                             src={file.url}
                             alt={`File ${index + 1}`}
@@ -449,7 +410,7 @@ export default function UserDashboard() {
                         {!file.approved ? (
                           <>
                             <div className="flex gap-2">
-                              <button onClick={() => selectedUser && approve(selectedUser, file.index,file.cid)} className="mt-2 px-4 py-1 bg-green-500 text-white rounded-lg hover:bg-green-600 flex items-center gap-1">
+                              <button onClick={() => selectedUser && approve(selectedUser, file.index, file.cid)} className="mt-2 px-4 py-1 bg-green-500 text-white rounded-lg hover:bg-green-600 flex items-center gap-1">
                                 <FaCheckCircle className="w-5 h-5" /> Approve
                               </button>
                               <button className="mt-2 px-4 py-1 bg-red-500 text-white rounded-lg hover:bg-green-600 flex items-center gap-1">

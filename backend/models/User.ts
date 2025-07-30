@@ -5,10 +5,11 @@ export interface IUser extends Document {
   email: string;
   userType: string;
   privateKey: string;
-  documentType: string;
   walletAddress: string;
   isBlocked: boolean;
   token: string;
+  orgContractAddress: string;
+  organization: string;
 }
 
 const UserSchema = new Schema<IUser>(
@@ -17,10 +18,11 @@ const UserSchema = new Schema<IUser>(
     email: { type: String, required: true, unique: true },
     userType: { type: String, default: "User" },
     privateKey: { type: String }, // it should be required 
-    documentType: { type: String, default: "" },
     walletAddress: { type: String },
     isBlocked: { type: Boolean, default: false },
-    token: { type: String }
+    token: { type: String },
+    orgContractAddress: { type: String },
+    organization: { type: String }
   },
   { timestamps: true }
 );

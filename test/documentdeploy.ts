@@ -18,7 +18,7 @@ import {
       // Contracts are deployed using the first signer/account by default
       const [owner, otherAccount] = await hre.ethers.getSigners();
   
-      const Document = await hre.ethers.getContractFactory("DocumentVerification");
+      const Document = await hre.ethers.getContractFactory("SuperAdmin");
       let documentContract = await Document.deploy();
         let documentContractAddress =  await documentContract.getAddress()
     //   console.log('documentContract', )
