@@ -5,8 +5,8 @@ import * as authService from "../services/authService";
 
 export const createAdmin = async (req: Request, res: Response) => {
     try {
-        const { name, email,orgContractAddress,organization } = req.body;
-        const user = await authService.createAdmin(name, email,orgContractAddress,organization);
+        const { name, email,orgContractAddress,organization,privateKey,walletAddress } = req.body;
+        const user = await authService.createAdmin(name, email,orgContractAddress,organization,privateKey,walletAddress);
         res.status(201).json({ message: "User registered successfully", user });
     } catch (error: any) {
         res.status(400).json({ error: error.message });
@@ -140,6 +140,34 @@ export const userListByWalletAddress = async (req: Request, res: Response) => {
         res.status(400).json({ error: error.message });
     }
 }
+export const getOrganizationContractAddress = async (req: Request, res: Response) => {
+    try {
+        const { type } = req.query;
+        const data = await authService.getOrganizationContractAddress(type as string);
+        res.status(200).json({ message: "Organization Contract Address Fetched successful", data });
+    } catch (error: any) {
+        res.status(400).json({ error: error.message });
+    }
+}
+
+export const getAllOrganization = async (req: Request, res: Response) => {
+    try {
+        const data = await authService.getAllOrganization();
+        res.status(200).json({ message: "Organization Fetched successful", data });
+    } catch (error: any) {
+        res.status(400).json({ error: error.message });
+    }
+}
+export const getAllAdminsByWalletAddress = async (req: Request, res: Response) => {
+    try {
+        const { walletAddress } = req.query;
+        const data = await authService.getAllAdminsByWalletAddress(walletAddress as string);
+        res.status(200).json({ message: "Admin Fetched successful", data });
+    } catch (error: any) {
+        res.status(400).json({ error: error.message });
+    }
+}
+
 
 
 

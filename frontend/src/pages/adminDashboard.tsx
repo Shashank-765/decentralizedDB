@@ -9,14 +9,17 @@ import blockIcon from '../assets/prohibition.png';
 import unblock from '../assets/unlock.png';
 import { useLocation, useNavigate } from "react-router-dom";
 import { create } from 'ipfs-http-client';
-const provider = new ethers.providers.JsonRpcProvider(config.URL_RPC);
-const adminWallet = new ethers.Wallet(config.adminPrivateKey, provider);
 import { OrgContractABI } from '../../NewAbi.tsx'
 import { fetchContentFromIpfs, decryptFile } from '../Common/Utils';
 const UserData = JSON.parse(localStorage.getItem("user") || "{}");
+const provider = new ethers.providers.JsonRpcProvider(config.URL_RPC);
+const signer = new ethers.Wallet(UserData?.privateKey, provider);
+// const getaddress = signer.address
+// const balance = await signer.getBalance();
+// console.log("ETH balance:=======>", ethers.utils.formatEther(balance), 'in this address', getaddress);
 let contract: any;
 if (UserData?.orgContractAddress) {
-  contract = new ethers.Contract(UserData?.orgContractAddress, OrgContractABI, adminWallet);
+  contract = new ethers.Contract(UserData?.orgContractAddress, OrgContractABI, signer);
 }
 
 interface DecryptedFile {
@@ -69,6 +72,7 @@ export default function UserDashboard() {
     try {
       setCircularLoading(true);
       const response = await contract.getAllUsers();
+      // console.log(response, "response")
       const userData = [];
       for (let i = 0; i < response.length; i++) {
         const walletAddress = response[i];
@@ -169,8 +173,12 @@ export default function UserDashboard() {
 
   const approve = async (walletAddress: string, index: number, cid: string) => {
     try {
-      const tx = await contract.verifyDocument(walletAddress, index, true);
-      await tx.wait();
+      try {
+        const tx = await contract.verifyDocument(walletAddress, index, true);
+        await tx.wait();
+      } catch (error: any) {
+        console.log("error====>", error)
+      }
 
       try {
         const response = await axios.post(`${config.URL_BACKEND}api/auth/approveDocument`, { cid, approvedBy: localUserData?._id },
@@ -183,7 +191,7 @@ export default function UserDashboard() {
         console.log(error)
       }
 
-      ToastMessage("Document Approved Successfully", "success", tx.hash || "");
+      ToastMessage("Document Approved Successfully", "success", "");
       setUsers((prevUsers) =>
         prevUsers.map((user) =>
           user.walletAddress === walletAddress
@@ -201,9 +209,53 @@ export default function UserDashboard() {
       );
       setShowModal(false);
     } catch (error: any) {
-      ToastMessage(`${error?.reason}`, "error", "");
+      console.log("error====>", error)
+      ToastMessage(`${error}`, "error", "");
     }
   };
+
+  const reject = async (walletAddress: string, index: number, cid: string) => {
+    try {
+      try {
+        const tx = await contract.verifyDocument(walletAddress, index, false);
+        await tx.wait();
+      } catch (error: any) {
+        console.log("error====>", error)
+      }
+
+      try {
+        const response = await axios.post(`${config.URL_BACKEND}api/auth/rejectDocument`, { cid, rejectedBy: localUserData?._id },
+          { headers: { _token: localUserData?.token } }
+        );
+        if (response.status === 200) {
+          console.log(response.data)
+        }
+      } catch (error: any) {
+        console.log(error)
+      }
+
+      ToastMessage("Document Rejected Successfully", "success", "");
+      setUsers((prevUsers) =>
+        prevUsers.map((user) =>
+          user.walletAddress === walletAddress
+            ? {
+              ...user,
+              fileLinks: user.fileLinks.map((file: any, i: any) =>
+                i === index ? { ...file, approved: true } : file
+              ),
+              status: user.fileLinks.every((file: any, i: any) => i === index || file.approved)
+                ? "Approved"
+                : "Pending",
+            }
+            : user
+        )
+      );
+      setShowModal(false);
+    } catch (error: any) {
+      console.log("error====>", error)
+      ToastMessage(`${error}`, "error", "");
+    }
+  }
 
   const openModal = (user: any) => {
     setSelectedFiles(user.fileLinks);
@@ -214,14 +266,13 @@ export default function UserDashboard() {
   const indexOfFirstUser = indexOfLastUser - usersPerPage;
   const currentUsers = users.slice(indexOfFirstUser, indexOfLastUser);
   const totalApproved = users.reduce((count, user) => {
-    return count + user.fileLinks.filter((file: any) => file.approved).length;
+    return count + user.fileLinks.filter((file: any) => file.approved == 1).length;
   }, 0);
-  //   const totalRejected = users.reduce((count, user) => {
-  //   return count + user.fileLinks.filter((file: any) => !file.approved).length;
-  // }, 0);
-  const totalRejected = 0;
+  const totalRejected = users.reduce((count, user) => {
+    return count + user.fileLinks.filter((file: any) => file.approved == 2).length;
+  }, 0);
   const totalPending = users.reduce((count, user) => {
-    return count + user.fileLinks.filter((file: any) => !file.approved).length;
+    return count + user.fileLinks.filter((file: any) => file.approved == 0).length;
   }, 0);
 
   const nextPage = () => {
@@ -388,7 +439,7 @@ export default function UserDashboard() {
                   </>
 
             }
-
+            {/* {console.log(selectedFiles,'selectedFiles')} */}
             {showModal && (
               <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center px-4">
                 <div ref={modalRef} className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[85vh]  p-8 overflow-y-auto scrollbar-hide">
@@ -413,17 +464,22 @@ export default function UserDashboard() {
                               <button onClick={() => selectedUser && approve(selectedUser, file.index, file.cid)} className="mt-2 px-4 py-1 bg-green-500 text-white rounded-lg hover:bg-green-600 flex items-center gap-1">
                                 <FaCheckCircle className="w-5 h-5" /> Approve
                               </button>
-                              <button className="mt-2 px-4 py-1 bg-red-500 text-white rounded-lg hover:bg-green-600 flex items-center gap-1">
+                              <button onClick={() => selectedUser && reject(selectedUser, file.index, file.cid)} className="mt-2 px-4 py-1 bg-red-500 text-white rounded-lg hover:bg-red-600 flex items-center gap-1">
                                 <FaBan className="w-5 h-5" /> Reject
                               </button>
                             </div>
 
                           </>
-                        ) : (
-                          <span className="mt-2 text-green-600 flex items-center gap-1">
-                            <FaCheckCircle className="w-5 h-5" /> Approved
-                          </span>
-                        )}
+                        ) :
+                          file.approved == 1 ? (
+                            <span className="mt-2 text-green-600 flex items-center gap-1">
+                              <FaCheckCircle className="w-5 h-5" /> Approved
+                            </span>
+                          ) :
+                            <span className="mt-2 text-red-600 flex items-center gap-1">
+                              <FaBan className="w-5 h-5" /> Rejected
+                            </span>
+                        }
                       </div>
                     ))}
                   </div>

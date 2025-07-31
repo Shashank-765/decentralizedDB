@@ -2,14 +2,14 @@ import User, { IUser } from "../models/User";
 import { generateAccessToken } from '../Authorization/Auth'
 import DocumentCidModel, { DocumentCid } from "../models/documentCid";
 
-export const createAdmin = async (name: string, email: string,orgContractAddress:string,organization:string): Promise<IUser> => {
+export const createAdmin = async (name: string, email: string,orgContractAddress:string,organization:string,privateKey:string,walletAddress:string): Promise<IUser> => {
     const userExists = await User.findOne({ email });
     if (userExists) {
         throw new Error("User already exists");
     }
     const token = await generateAccessToken(email);
     const user = new User({
-        name, email, userType: "Admin", token,orgContractAddress,organization
+        name, email, userType: "Admin", token,orgContractAddress,organization,privateKey,walletAddress
     });
     await user.save();
 
@@ -463,5 +463,23 @@ export const fakeDataToStore = async (): Promise<IUser[]> => {
     console.log(data)
     return data;
 }
+export const getOrganizationContractAddress = async (type: string): Promise<string> => {
+    const data = await User.findOne({ organization: type });
+    if (!data) {
+        throw new Error("Organization not found");
+    }
+    return data.orgContractAddress;
+}
+export const getAllOrganization = async (): Promise<IUser[]> => {
+    const data = await User.find({ userType: "Admin" }).select("orgContractAddress organization");
+    return data;
+}
+
+export const getAllAdminsByWalletAddress = async (walletAddress: string): Promise<IUser | null> => {
+    const data = await User.findOne({ walletAddress });
+    return data;
+}
+
+
 
 

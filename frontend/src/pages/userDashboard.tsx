@@ -41,6 +41,8 @@ const UserDashboard: React.FC = () => {
     const [isCircularLoading, setIsCirculrLoading] = useState(false);
     const [signer, setSigner] = useState<ethers.Signer | null>(null);
     const [loading, setLoading] = useState(false);
+    const [orgContractAddress, setOrgContractAddress] = useState('');
+    const [organizations, setOrganizations] = useState([]);
     // const approvedDocs = dummyDocuments.filter((doc) => doc.status === "approved");
     // const rejectedDocs = dummyDocuments.filter((doc) => doc.status === "rejected");
     const rejectedDocs = [];
@@ -57,14 +59,28 @@ const UserDashboard: React.FC = () => {
     const adminUser = location.state?.user;
     const userData = adminUser ? adminUser : JSON.parse(localStorage.getItem("user") || "{}");
 
+    const fetchAllOrganization = async () => {
+        try {
+            const response = await axios.get(`${config.URL_BACKEND}api/auth/getAllOrganization`, {
+                headers: { _token: userData?.token }
+            })
+            // console.log(response.data, "response")
+            setOrganizations(response.data.data)
+        } catch (error) {
+            console.log(error, "error")
+        }
+    }
+    useEffect(() => {
+        fetchAllOrganization();
+    }, []);
 
-
-
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const handleChange = async (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
+        if (name === 'type') {
+            setOrgContractAddress(value)
+        }
         setFormData(prev => ({ ...prev, [name]: value }));
     };
-
     useEffect(() => {
         async function getSigner() {
             try {
@@ -74,11 +90,9 @@ const UserDashboard: React.FC = () => {
                 }
                 const ethersProvider = new ethers.providers.JsonRpcProvider(config.URL_RPC);
                 const signer = new ethers.Wallet(userData?.privateKey, ethersProvider);
-                const balance = await signer.getBalance();
                 setSigner(signer);
                 const address = await signer.getAddress();
                 await ensureMinBalance(address);
-                console.log("ETH balance:=======>", ethers.utils.formatEther(balance), 'in this address', address);
 
             } catch (error) {
                 console.error(error, "<--------------------------------error");
@@ -90,7 +104,7 @@ const UserDashboard: React.FC = () => {
 
     useEffect(() => {
         if (userData?.walletAddress) {
-            const contract = new ethers.Contract(userData.orgContractAddress, OrgContractABI, Jsonprovider);
+            const contract = new ethers.Contract(userData?.orgContractAddress, OrgContractABI, Jsonprovider);
             contract.getApprovedDocuments(userData.walletAddress).then(setIpfsFile).finally(() => setLoading(false));
         }
     }, [userData?.walletAddress]);
@@ -308,7 +322,7 @@ const UserDashboard: React.FC = () => {
                 ToastMessage(`Wallet address not found!`, "error", "");
                 return;
             }
-            const contract = new ethers.Contract(userData?.orgContractAddress, OrgContractABI, signer);
+            const contract = new ethers.Contract(orgContractAddress, OrgContractABI, signer);
             console.log('wallet, folderCid', wallet, folderCid)
             const tx = await contract.uploadDocument(folderCid, type);
             await tx.wait();
@@ -484,18 +498,11 @@ const UserDashboard: React.FC = () => {
                                                 className="appearance-none border border-gray-600 rounded-md py-2 px-4 pr-10 bg-white text-gray-800"
                                             >
                                                 <option value="all">All</option>
-                                                <option value="uid">Aadhaar Card</option>
-                                                <option value="pan">PAN Card</option>
-                                                <option value="passport">Passport</option>
-                                                <option value="voter_id">Voter ID</option>
-                                                <option value="driving_license">Driving License</option>
-                                                <option value="ration_card">Ration Card</option>
-                                                <option value="birth_certificate">Birth Certificate</option>
-                                                <option value="income_certificate">Income Certificate</option>
-                                                <option value="caste_certificate">Caste Certificate</option>
-                                                <option value="residence_proof">Residence Proof</option>
-                                                <option value="electricity_bill">Electricity Bill</option>
-                                                <option value="bank_passbook">Bank Passbook</option>
+                                                {organizations.map((org: any, index) => (
+                                                    <option key={index} value={org.orgContractAddress}>
+                                                        {org.organization}
+                                                    </option>
+                                                ))}
                                             </select>
 
                                             {/* Custom arrow icon */}
@@ -564,31 +571,31 @@ const UserDashboard: React.FC = () => {
                                             <div
                                                 key={index}
                                                 onClick={() => openPreview(file)}
-                                                className="bg-white cursor-pointer w-full max-w-sm mx-auto rounded-xl shadow-xl flex flex-col items-center hover:scale-105 transition-transform duration-200 p-4"
+                                                className="cursor-pointer w-full max-w-sm mx-auto rounded-xl flex flex-col items-center"
                                             >
                                                 {
                                                     file.mimeType === 'application/pdf' ? (
                                                         <img
                                                             src={pdficon}
                                                             alt="PDF"
-                                                            className="w-40 h-40 sm:w-44 sm:h-44 xl:w-48 xl:h-48 object-contain rounded-lg shadow-md"
+                                                            className="w-45 h-45 sm:w-44 sm:h-44 xl:w-48 xl:h-48 object-contain rounded-lg shadow-md hover:scale-105 transition-transform duration-500"
                                                         />
                                                     ) : (file.mimeType === 'image/jpeg' || file.mimeType === 'image/png' || file.mimeType === 'image/jpg') ? (
                                                         <img
                                                             src={file?.url}
                                                             alt="image"
-                                                            className="w-40 h-40 sm:w-44 sm:h-44 xl:w-48 xl:h-48 object-cover rounded-lg shadow-md"
+                                                            className="w-45 h-45 sm:w-44 sm:h-44 xl:w-48 xl:h-48 object-cover rounded-lg shadow-md hover:scale-105 transition-transform duration-500"
                                                         />
                                                     ) : (
                                                         <img
                                                             src={fileIcons}
                                                             alt="File Icon"
-                                                            className="w-40 h-40 sm:w-44 sm:h-44 xl:w-48 xl:h-48 object-contain rounded-lg shadow-md"
+                                                            className="w-45 h-45 sm:w-44 sm:h-44 xl:w-48 xl:h-48 object-contain rounded-lg shadow-md hover:scale-105 transition-transform duration-500"
                                                         />
                                                     )
                                                 }
-                                                <p className="text-sm font-medium text-gray-700 mt-2 text-center break-words">
-                                                    {file?.folderName}
+                                                <p className="text-lg font-medium text-gray-700 mt-6 text-center break-words">
+                                                    {file?.folderName.toUpperCase()}
                                                 </p>
                                             </div>
                                         ))}
@@ -700,18 +707,11 @@ const UserDashboard: React.FC = () => {
                                                 className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500"
                                             >
                                                 <option value="">Select document type</option>
-                                                <option value="uid">Aadhaar Card</option>
-                                                <option value="pan">PAN Card</option>
-                                                <option value="passport">Passport</option>
-                                                <option value="voter_id">Voter ID</option>
-                                                <option value="driving_license">Driving License</option>
-                                                <option value="ration_card">Ration Card</option>
-                                                <option value="birth_certificate">Birth Certificate</option>
-                                                <option value="income_certificate">Income Certificate</option>
-                                                <option value="caste_certificate">Caste Certificate</option>
-                                                <option value="residence_proof">Residence Proof</option>
-                                                <option value="electricity_bill">Electricity Bill</option>
-                                                <option value="bank_passbook">Bank Passbook</option>
+                                                {organizations.map((org: any, index) => (
+                                                    <option key={index} value={org.orgContractAddress}>
+                                                        {org.organization}
+                                                    </option>
+                                                ))}
                                             </select>
                                         </div>
 

@@ -7,58 +7,22 @@ import axios from "axios";
 import ToastMessage from "./toastmessage";
 import blockIcon from '../assets/prohibition.png';
 import unblock from '../assets/unlock.png';
-import { SuperAdminABI, OrgContractABI } from '../../NewAbi.tsx'
+import { SuperAdminABI } from '../../NewAbi.tsx'
 import { ethers } from "ethers";
 const provider = new ethers.providers.JsonRpcProvider(config.URL_RPC);
 const adminWallet = new ethers.Wallet(config.adminPrivateKey, provider);
 const SuperAdminContract = new ethers.Contract(config.contractAddress, SuperAdminABI, adminWallet);
-
-try {
-  const [admins, balances] = await SuperAdminContract.getAllOrgAdminBalances();
-  admins.forEach((admin: any, idx: any) => {
-    console.log(`Admin: ${admin} - Balance: ${ethers.utils.formatEther(balances[idx])} MATIC`);
-  });
-}
-catch (error) {
-  console.log(error)
-}
-let userData = JSON.parse(localStorage.getItem("user") || "{}");
-let orgcontract: any;
-if (userData?.orgContractAddress) {
-  orgcontract = new ethers.Contract(userData?.orgContractAddress, OrgContractABI, adminWallet);
-}
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, Tooltip, Legend, CartesianGrid, ResponsiveContainer } from 'recharts';
 
-type Document = {
-  id: number;
-  name: string;
-  status: "approved" | "rejected";
-  adminName: string;
-};
-
-type Admin = {
-  _id: string;
-  name: string;
-  email: string;
-  userType: string;
-  isBlocked: boolean;
-};
-
-type User = {
-  _id: string;
-  name: string;
-  email: string;
-  role: string;
-  userType: string;
-  isBlocked: boolean;
-};
-
-const dummyDocuments: Document[] = [
+const dummyDocuments: any = [
   { id: 1, name: "User A - Doc 1", status: "approved", adminName: "Admin One" },
   { id: 2, name: "User B - Doc 2", status: "rejected", adminName: "Admin Two" },
   { id: 3, name: "User C - Doc 3", status: "approved", adminName: "Admin Two" },
   { id: 4, name: "User D - Doc 4", status: "rejected", adminName: "Admin One" },
 ];
+
+
+
 const today = new Date();
 const yesterday = new Date(today);
 yesterday.setDate(yesterday.getDate() - 1);
@@ -136,29 +100,29 @@ const SuperAdminDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState("Dashboard");
   const [isCreateModelOpen, setIsCreateModelOpen] = useState(false);
   const [dataToSend, setdataToSend] = useState({ name: "", email: "", organization: "", orgContractAddress: "" })
-  const [allUsers, setAllUsers] = useState<User[]>([]);
-  const [allAdmins, setAllAdmins] = useState<Admin[]>([]);
+  const [allUsers, setAllUsers] = useState<any>([]);
+  const [allAdmins, setAllAdmins] = useState<any>([]);
   const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff8042'];
   const [graphData, setGraphData] = useState([]);
   const [filterType, setFilterType] = useState('day'); // day, week, month, year
   const [startDate, setStartDate] = useState(yesterday.toISOString().split('T')[0]);
   const [endDate, setEndDate] = useState(today.toISOString().split('T')[0]);
   const localUserData = JSON.parse(localStorage.getItem("user") || "{}");
-
+  const [allBalances, setAllBalances] = useState<any>([]);
   const totalUsers = allUsers.length;
   const totalAdmins = allAdmins.length;
-  const approvedDocs = dummyDocuments.filter((doc) => doc.status === "approved");
-  const rejectedDocs = dummyDocuments.filter((doc) => doc.status === "rejected");
+  const approvedDocs = dummyDocuments.filter((doc: any) => doc.status === "approved");
+  const rejectedDocs = dummyDocuments.filter((doc: any) => doc.status === "rejected");
   const navigate = useNavigate();
   const closeModal = () => setModalType(null);
 
-  const navigateToAdmin = (admin: Admin) => {
+  const navigateToAdmin = (admin: any) => {
     navigate("/adminDashboard", { state: { admin } });
   };
 
-  const navigateToUser = (user: User) => {
-    navigate("/userDashboard", { state: { user } });
-  };
+  // const navigateToUser = (user: User) => {
+  //   navigate("/userDashboard", { state: { user } });
+  // };
   useEffect(() => {
     const handleOutsideClick = (event: MouseEvent) => {
       if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
@@ -201,13 +165,24 @@ const SuperAdminDashboard: React.FC = () => {
         }
         return;
       }
-      const contractResponse = await SuperAdminContract.createOrganization(localUserData?.walletAddress, dataToSend.organization, { value: ethers.utils.parseEther("0.1") }
+
+      //  const localUserDataweallet="0x90F79bf6EB2c4f870365E785982E1f101E93b906"
+      // const pk="0x7c852118294e51e653712a81e05800f419141751be58f605c371e15141b007a6"
+      const localUserDataweallet2 = "0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65"
+      const pk2 = "0x47e179ec197488593b187f80a00eb0da91f1b9d0b13f8733639f19c30a34926a"
+      //  const localUserDataweallet3="0x9965507D1a55bcC2695C58ba16FB37d819B0A4dc"
+      // const pk3=" 0x8b3a350cf5c34c9194ca85829a2df0ec3153be0318b5e2d3348e872092edffba"
+      //  const localUserDataweallet4="0x976EA74026E726554dB657fA54763abd0C3a0aa9"
+      // const pk4=" 0x92db14e403b83dfe3df233f83dfa3a0d7096f21ca9b0d6d6b8d88b2b4ec1564e"
+      //  const localUserDataweallet5="0x14dC79964da2C08b23698B3D3cc7Ca32193d9955"
+      //  const pk5="0x4bbbf85ce3377467afe5d46f804f221813b2bb87f24d81f60f1fcdbf7cbf4356"
+      const contractResponse = await SuperAdminContract.createOrganization(localUserDataweallet2, dataToSend.organization, { value: ethers.utils.parseEther("0.1") }
       );
       const receipt = await contractResponse.wait();
+      console.log(receipt, "receipt")
       setIsCreateModelOpen(false);
 
       const getAllOrgs = await SuperAdminContract.getAllOrgs();
-      console.log(getAllOrgs, "getAllOrgs")
 
       if (receipt.status === 1) {
         try {
@@ -216,13 +191,14 @@ const SuperAdminDashboard: React.FC = () => {
             email: dataToSend.email,
             organization: dataToSend.organization,
             userType: "Admin",
+            walletAddress: localUserDataweallet2,
+            privateKey: pk2,
             orgContractAddress: getAllOrgs[getAllOrgs.length - 1].orgContractAddress
           },
             {
               headers: { _token: localUserData?.token }
             }
           );
-          console.log(response, 'this is response created==========>');
           if (response.status === 201) {
             setIsCreateModelOpen(false);
             ToastMessage("Admin Created Successfully", "success", "");
@@ -242,39 +218,42 @@ const SuperAdminDashboard: React.FC = () => {
     }
   };
 
-  const fetchAllUser = async () => {
-    const user = await orgcontract.getAllUsers();
+  // const fetchAllUser = async () => {
 
-    try {
-      for (let i = 0; i < user.length; i++) {
-        const response = await axios.get(`${config.URL_BACKEND}api/auth/userListByWalletAddress?walletAddress=${user[i]}`);
-        if (response.status === 200) {
-          setAllUsers((prev: any) => [...prev, response.data.user]);
-        }
-      }
-    } catch (error) {
-      console.log(error);
-      return;
-    }
-  }
+  //   try {
+  //     for (let i = 0; i < user.length; i++) {
+  //       const response = await axios.get(`${config.URL_BACKEND}api/auth/userListByWalletAddress?walletAddress=${user[i]}`);
+  //       if (response.status === 200) {
+  //         setAllUsers((prev: any) => [...prev, response.data.user]);
+  //       }
+  //     }
+  //   } catch (error) {
+  //     console.log(error);
+  //     return;
+  //   }
+  // }
 
   const fetchAllAdmins = async () => {
-
-    try {
-      const response = await axios.get(`${config.URL_BACKEND}api/auth/getAllAdmins`);
-      if (response.status === 200) {
-        setAllAdmins(response.data.admin);
+    const getAllOrgs = await SuperAdminContract.getAllOrgs();
+    const getallbalance = await SuperAdminContract.getAllOrgAdminBalances();
+    setAllBalances(getallbalance[1])
+    for (let i = 0; i < getAllOrgs.length; i++) {
+      try {
+        const response = await axios.get(`${config.URL_BACKEND}api/auth/getAllAdminsByWalletAddress?walletAddress=${getAllOrgs[i].orgAdmin}`);
+        if (response.status === 200) {
+          setAllAdmins((prev: any) => [...prev, response.data.data]);
+        }
+      } catch (error) {
+        console.log(error)
       }
-    } catch (error) {
-      console.log(error);
-      return;
     }
   }
 
   useEffect(() => {
-    fetchAllUser();
+    // fetchAllUser();
     fetchAllAdmins();
   }, [])
+
 
   const blockUser = async (_id: string, userType: string) => {
     try {
@@ -285,7 +264,7 @@ const SuperAdminDashboard: React.FC = () => {
       if (userType === "Admin") {
         fetchAllAdmins();
       } else {
-        fetchAllUser();
+        // fetchAllUser();
       }
     } catch (error) {
       console.error("Error blocking user:", error);
@@ -301,7 +280,7 @@ const SuperAdminDashboard: React.FC = () => {
       if (userType === "Admin") {
         fetchAllAdmins();
       } else {
-        fetchAllUser();
+        // fetchAllUser();
       }
     } catch (error) {
       console.error("Error unblocking user:", error);
@@ -389,7 +368,7 @@ const SuperAdminDashboard: React.FC = () => {
               Admin
             </button>
 
-            <button
+            {/* <button
               className={`flex items-center gap-3 px-4 py-3 rounded-xl text-base font-medium transition
               ${activeTab === "Users"
                   ? "bg-gray-700 text-white"
@@ -399,7 +378,7 @@ const SuperAdminDashboard: React.FC = () => {
             >
               <FaUserShield className="text-lg transition-colors duration-200" />
               Users
-            </button>
+            </button> */}
 
             <button
               className={`flex items-center gap-3 px-4 py-3 rounded-xl text-base font-medium transition
@@ -449,15 +428,17 @@ const SuperAdminDashboard: React.FC = () => {
                         <th className="py-4 px-6 text-left">Name</th>
                         <th className="py-4 px-6 text-left">Email</th>
                         <th className="py-4 px-6 text-left">Status</th>
+                        <th className="py-4 px-6 text-left">Balance</th>
                         <th className="py-4 px-6 text-center">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="text-gray-800">
-                      {allAdmins?.map((admin, index) => (
+                      {allAdmins?.map((admin: any, index: any) => (
                         <tr key={index} className="border-t hover:bg-gray-50 transition">
                           <td className="py-4 px-6 text-base">{admin.name}</td>
                           <td className="py-4 px-6 text-base">{admin.email}</td>
                           <td className="py-4 px-6 text-base">{admin.userType}</td>
+                          <td className="py-4 px-6 text-base">{Number(ethers.utils.formatEther(allBalances[index])).toFixed(2)}</td>
                           <td className="py-4 px-6 text-base flex gap-2 justify-center">
                             {/* <button className="text-white px-2 py-1 rounded-full text-sm font-medium transition"> */}
                             {admin.isBlocked ? (
@@ -476,7 +457,7 @@ const SuperAdminDashboard: React.FC = () => {
               </div>
 
               {/* Users Table */}
-              <div className="flex-1 min-w-0 bg-white shadow-2xl rounded-2xl overflow-hidden">
+              {/* <div className="flex-1 min-w-0 bg-white shadow-2xl rounded-2xl overflow-hidden">
                 <h2 className="text-lg font-semibold text-gray-700 px-6 py-4 border-b">Users</h2>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
@@ -495,21 +476,19 @@ const SuperAdminDashboard: React.FC = () => {
                           <td className="py-4 px-6 text-base">{user.email}</td>
                           <td className="py-4 px-6 text-base">{user.userType}</td>
                           <td className="py-4 px-6 text-base flex gap-2 justify-center">
-                            {/* <button className="bg-indigo-500 hover:bg-indigo-600 text-white px-2 py-1 rounded-full text-sm font-medium transition"> */}
                             {user.isBlocked ? (
                               <button onClick={() => blockUser(user?._id, user?.userType)} className="text-red-600"><img src={blockIcon} alt="" className="w-5 h-5 cursor-pointer" /></button>
                             ) : (
                               <button onClick={() => unblockUser(user?._id, user?.userType)} className="text-green-600"><img src={unblock} alt="" className="w-5 h-5 cursor-pointer" /></button>
                             )}
                             <FaEye onClick={() => navigateToUser(user)} className="w-5 h-5 cursor-pointer" />
-                            {/* </button> */}
                           </td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
-              </div>
+              </div> */}
             </div>
           </>
         }
@@ -525,17 +504,19 @@ const SuperAdminDashboard: React.FC = () => {
                     <tr>
                       <th className="py-4 px-6 text-left">Name</th>
                       <th className="py-4 px-6 text-left">Email</th>
-                      <th className="py-4 px-6 text-left">Status</th>
+                      <th className="py-4 px-6 text-left">Organization</th>
+                      <th className="py-4 px-6 text-left">Balance</th>
                       <th className="py-4 px-6 text-center">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="text-gray-800">
-                    {allAdmins.map((admin, index) => (
+                    {allAdmins.map((admin: any, index: any) => (
                       <tr key={index} className="border-t hover:bg-gray-50 transition">
                         <td className="py-4 px-6 text-base">{admin.name}</td>
                         <td className="py-4 px-6 text-base">{admin.email}</td>
                         <td className="py-4 px-6 text-base">{admin.userType}</td>
                         <td className="py-4 px-6 text-base flex gap-2 justify-center">
+
                           {/* <button className="bg-indigo-500 hover:bg-indigo-600 text-white px-2 py-1 rounded-full text-sm font-medium transition"> */}
                           {admin.isBlocked ? (
                             <button onClick={() => blockUser(admin?._id, admin?.userType)} className="text-red-600"><img src={blockIcon} alt="" className="w-5 h-5 cursor-pointer" /></button>
@@ -554,7 +535,7 @@ const SuperAdminDashboard: React.FC = () => {
           </>
         }
 
-        {
+        {/* {
           activeTab === "Users" &&
           <>
             <div className="flex-1 min-w-0 bg-white shadow-2xl rounded-2xl overflow-hidden">
@@ -578,14 +559,12 @@ const SuperAdminDashboard: React.FC = () => {
                         <td className="py-4 px-6 text-base">{user.userType}</td>
                         <td className="py-4 px-6 text-base">{user.userType}</td>
                         <td className="py-4 px-6 text-base flex gap-2 justify-center">
-                          {/* <button className="bg-indigo-500 hover:bg-indigo-600 text-white px-2 py-1 rounded-full text-sm font-medium transition"> */}
                           {user.isBlocked ? (
                             <button onClick={() => blockUser(user?._id, user?.userType)} className="text-red-600"><img src={blockIcon} alt="" className="w-5 h-5 cursor-pointer" /></button>
                           ) : (
                             <button onClick={() => unblockUser(user?._id, user?.userType)} className="text-green-600"><img src={unblock} alt="" className="w-5 h-5 cursor-pointer" /></button>
                           )}
                           <FaEye onClick={() => navigateToUser(user)} className="w-5 h-5 cursor-pointer" />
-                          {/* </button> */}
                         </td>
                       </tr>
                     ))}
@@ -594,7 +573,7 @@ const SuperAdminDashboard: React.FC = () => {
               </div>
             </div>
           </>
-        }
+        } */}
 
         {
           activeTab === "Reports" &&
@@ -723,18 +702,18 @@ const SuperAdminDashboard: React.FC = () => {
                         className="appearance-none w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-indigo-500"
                       >
                         <option value="" disabled selected hidden>Select Organization...</option>
-                        <option value="uid">Aadhaar Card</option>
-                        <option value="pan">PAN Card</option>
-                        <option value="passport">Passport</option>
-                        <option value="voter_id">Voter ID</option>
-                        <option value="driving_license">Driving License</option>
-                        <option value="ration_card">Ration Card</option>
-                        <option value="birth_certificate">Birth Certificate</option>
-                        <option value="income_certificate">Income Certificate</option>
-                        <option value="caste_certificate">Caste Certificate</option>
-                        <option value="residence_proof">Residence Proof</option>
-                        <option value="electricity_bill">Electricity Bill</option>
-                        <option value="bank_passbook">Bank Passbook</option>
+                        <option value="Uid">Aadhaar Card</option>
+                        <option value="Pan">PAN Card</option>
+                        <option value="Passport">Passport</option>
+                        <option value="VoterId">Voter ID</option>
+                        <option value="DrivingLicense">Driving License</option>
+                        <option value="RationCard">Ration Card</option>
+                        <option value="BirthCertificate">Birth Certificate</option>
+                        <option value="IncomeCertificate">Income Certificate</option>
+                        <option value="CasteCertificate">Caste Certificate</option>
+                        <option value="ResidenceProof">Residence Proof</option>
+                        <option value="ElectricityBill">Electricity Bill</option>
+                        <option value="BankPassbook">Bank Passbook</option>
                       </select>
 
                       {/* Custom arrow icon */}

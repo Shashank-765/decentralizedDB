@@ -9,11 +9,12 @@ import CircularLoader from "../CircularLoader/CircularLoader";
 import walletImage from '../assets/wallet.png'
 import copyImage from '../assets/copy.png'
 import config from "../../config.json"
-import { useWeb3AuthConnect, useWeb3AuthDisconnect, useWeb3AuthUser,useWeb3Auth } from "@web3auth/modal/react";
+import { useWeb3AuthConnect, useWeb3AuthDisconnect, useWeb3AuthUser, useWeb3Auth } from "@web3auth/modal/react";
 import { useAccount } from "wagmi";
 import profilelogo from '../assets/user.png'
 import { WithdrawModal, QrcodeModel } from "./Modals";
 import { ethers } from "ethers";
+
 
 function Header() {
   const [searchParams] = useSearchParams();
@@ -39,27 +40,22 @@ function Header() {
   const [balanceOpen2, setBalanceOpen2] = useState(false);
   const [isOpenModalPopup, setIsOpenModalPopup] = useState(false);
   const [isOpenModalQrPopup, setIsOpenModalQrPopup] = useState(false);
-  const { provider } = useWeb3Auth();
+  const [walletBalance, setWalletBalance] = useState('');
 
-    useEffect(()=>{
-      async function getPrivateKey(){
-        try {
-          if(!provider){
-          return;
-        }
-        const ethersProvider = new ethers.providers.Web3Provider(provider);
-        
-const signer = await ethersProvider.getSigner();
-signer.getAddress().then((address) => {
-  console.log(address,"<--------------------------------address");
-})  
+  useEffect(() => {
+    async function getPrivateKey() {
+      try {
+        const ethersProvider = new ethers.providers.JsonRpcProvider(config.URL_RPC);
+        const signer = new ethers.Wallet(user?.privateKey, ethersProvider);
+        const balance = await signer.getBalance();
+        setWalletBalance(ethers.utils.formatEther(balance));
       }
       catch (error) {
-        console.log(error,"<--------------------------------error");
+        console.log(error, "<--------------------------------error");
       }
-      }
-      getPrivateKey();
-    },[])
+    }
+    getPrivateKey();
+  }, [])
 
 
   useEffect(() => {
@@ -325,11 +321,11 @@ signer.getAddress().then((address) => {
                   </li>
                   <li className="relative">
                     <div
-                      className="text-gray-700 hover:text-gray-800 text-lg w-40 h-11 flex items-center justify-center rounded-full bg-white shadow-md hover:shadow-lg transition cursor-pointer"
+                      className="text-gray-700 hover:text-gray-800 text-lg pl-6 pr-6 h-11 flex items-center justify-center rounded-full bg-white shadow-md hover:shadow-lg transition cursor-pointer"
                       onClick={() => setBalanceOpen(!balanceOpen)}
                     >
                       <img src={walletImage} className="w-5 h-5" alt="" />
-                      <p className="ml-2">0.0 ETH</p>
+                      <p className="ml-2">{Number(walletBalance).toFixed(2)} ETH</p>
                       <svg
                         className="w-4 h-4 ml-1 text-gray-600"
                         fill="none"
@@ -375,11 +371,11 @@ signer.getAddress().then((address) => {
                     </li>
                     <li className="relative">
                       <div
-                        className="text-gray-700 hover:text-gray-800 text-lg w-40 h-11 flex items-center justify-center rounded-full bg-white shadow-md hover:shadow-lg transition cursor-pointer"
+                        className="text-gray-700 hover:text-gray-800 text-lg pl-6 pr-6 h-11 flex items-center justify-center rounded-full bg-white shadow-md hover:shadow-lg transition cursor-pointer"
                         onClick={() => setBalanceOpen(!balanceOpen)}
                       >
                         <img src={walletImage} className="w-5 h-5" alt="" />
-                        <p className="ml-2"> 454.00 ETH
+                        <p className="ml-2"> {Number(walletBalance).toFixed(2)} ETH
                         </p>
                         <svg
                           className="w-4 h-4 ml-1 text-gray-600"
@@ -426,11 +422,11 @@ signer.getAddress().then((address) => {
                       </li>
                       <li className="relative">
                         <div
-                          className="text-gray-700 hover:text-gray-800 text-lg w-40 h-11 flex items-center justify-center rounded-full bg-white shadow-md hover:shadow-lg transition cursor-pointer"
+                          className="text-gray-700 hover:text-gray-800 text-lg pl-6 pr-6 h-11 flex items-center justify-center rounded-full bg-white shadow-md hover:shadow-lg transition cursor-pointer"
                           onClick={() => setBalanceOpen(!balanceOpen)}
                         >
                           <img src={walletImage} className="w-5 h-5" alt="" />
-                          <p className="ml-2">0.0 ETH</p>
+                          <p className="ml-2">{Number(walletBalance).toFixed(2)} ETH</p>
                           <svg
                             className="w-4 h-4 ml-1 text-gray-600"
                             fill="none"
@@ -564,11 +560,11 @@ signer.getAddress().then((address) => {
                   </li>
                   <li className="relative">
                     <div
-                      className="text-gray-700 hover:text-gray-800 text-lg w-40 h-11 flex items-center justify-center rounded-full bg-white shadow-md hover:shadow-lg transition cursor-pointer"
+                      className="text-gray-700 hover:text-gray-800 text-lg pl-6 pr-6 h-11 flex items-center justify-center rounded-full bg-white shadow-md hover:shadow-lg transition cursor-pointer"
                       onClick={() => setBalanceOpen2(!balanceOpen2)}
                     >
                       <img src={walletImage} className="w-5 h-5" alt="" />
-                      <p className="ml-2">0.0 ETH</p>
+                      <p className="ml-2">{Number(walletBalance).toFixed(2)} ETH</p>
                       <svg
                         className="w-4 h-4 ml-1 text-gray-600"
                         fill="none"
@@ -613,11 +609,11 @@ signer.getAddress().then((address) => {
                   </li>
                   <li className="relative">
                     <div
-                      className="text-gray-700 hover:text-gray-800 text-lg w-40 h-11 flex items-center justify-center rounded-full bg-white shadow-md hover:shadow-lg transition cursor-pointer"
+                      className="text-gray-700 hover:text-gray-800 text-lg pl-6 pr-6 h-11 flex items-center justify-center rounded-full bg-white shadow-md hover:shadow-lg transition cursor-pointer"
                       onClick={() => setBalanceOpen2(!balanceOpen2)}
                     >
                       <img src={walletImage} className="w-5 h-5" alt="" />
-                      <p className="ml-2"> 454.00 ETH
+                      <p className="ml-2"> {Number(walletBalance).toFixed(2)} ETH
                       </p>
                       <svg
                         className="w-4 h-4 ml-1 text-gray-600"
@@ -664,11 +660,11 @@ signer.getAddress().then((address) => {
                   </li>
                   <li className="relative">
                     <div
-                      className="text-gray-700 hover:text-gray-800 text-lg w-40 h-11 flex items-center justify-center rounded-full bg-white shadow-md hover:shadow-lg transition cursor-pointer"
+                      className="text-gray-700 hover:text-gray-800 text-lg pl-6 pr-6 h-11 flex items-center justify-center rounded-full bg-white shadow-md hover:shadow-lg transition cursor-pointer"
                       onClick={() => setBalanceOpen2(!balanceOpen2)}
                     >
                       <img src={walletImage} className="w-5 h-5" alt="" />
-                      <p className="ml-2">0.0 ETH</p>
+                      <p className="ml-2">{Number(walletBalance).toFixed(2)} ETH</p>
                       <svg
                         className="w-4 h-4 ml-1 text-gray-600"
                         fill="none"

@@ -2,7 +2,7 @@
 import express from "express";
 import {
   createAdmin, login, userList, updateUser, getuserdata,
-  blockUser, unblockUser, addDocument, getAllUsers, getAllAdmins, approveDocument, rejectDocument,getGraphData,fakeDataToStore,userListByWalletAddress
+  blockUser, unblockUser, addDocument, getAllUsers, getAllAdmins, approveDocument, rejectDocument,getGraphData,fakeDataToStore,userListByWalletAddress,getOrganizationContractAddress,getAllOrganization,getAllAdminsByWalletAddress
 } from "../controllers/authController";
 import { authorize } from "../Authorization/Auth";
 
@@ -23,5 +23,8 @@ router.post("/rejectDocument", authorize, rejectDocument)
 router.get('/getGraphData',authorize,getGraphData)
 router.post('/fakeDataToStore',fakeDataToStore)
 router.get('/userListByWalletAddress',userListByWalletAddress)
+router.get('/getAllAdminsByWalletAddress',getAllAdminsByWalletAddress)
+router.get('/getOrganizationContractAddress',authorize,getOrganizationContractAddress)
+router.get('/getAllOrganization',authorize,getAllOrganization)
 
 export default router;
