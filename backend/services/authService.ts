@@ -45,8 +45,8 @@ export const loginUser = async (email: string, walletAddress: string, name: stri
         user = userExists;
 
         if (!userExists.walletAddress) {
-            // userExists.walletAddress = walletAddress;
-            // await userExists.save();
+            userExists.walletAddress = walletAddress;
+            await userExists.save();
         }
     } else {
         user = await User.create({
@@ -73,7 +73,6 @@ export const userList = async (): Promise<IUser[]> => {
     return userData;
 };
 export const blockUser = async (id: string): Promise<IUser> => {
-    console.log(id, 'this is id');
     const user = await User.findById(id);
     if (!user) {
         throw new Error("User not found");
@@ -83,7 +82,6 @@ export const blockUser = async (id: string): Promise<IUser> => {
     return user;
 };
 export const unblockUser = async (id: string): Promise<IUser> => {
-    console.log(id, 'this is id');
     try {
         const user = await User.findById(id);
         if (!user) {
@@ -475,11 +473,17 @@ export const getAllOrganization = async (): Promise<IUser[]> => {
     return data;
 }
 
-export const getAllAdminsByWalletAddress = async (walletAddress: string): Promise<IUser | null> => {
-    const data = await User.findOne({ walletAddress });
+export const getAllAdminsByWalletAddress = async (
+    walletAddresses: string
+  ): Promise<IUser[] | null> => {
+    const walletAddressArray: string[] = walletAddresses
+      .split(',')
+      .map((addr: string) => addr.trim());
+  
+    const data = await User.find({ walletAddress: { $in: walletAddressArray } });
     return data;
-}
-
+  };
+  
 
 
 

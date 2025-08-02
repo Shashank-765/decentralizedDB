@@ -11,16 +11,8 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { create } from 'ipfs-http-client';
 import { OrgContractABI } from '../../NewAbi.tsx'
 import { fetchContentFromIpfs, decryptFile } from '../Common/Utils';
-const UserData = JSON.parse(localStorage.getItem("user") || "{}");
-const provider = new ethers.providers.JsonRpcProvider(config.URL_RPC);
-const signer = new ethers.Wallet(UserData?.privateKey, provider);
-// const getaddress = signer.address
-// const balance = await signer.getBalance();
-// console.log("ETH balance:=======>", ethers.utils.formatEther(balance), 'in this address', getaddress);
-let contract: any;
-if (UserData?.orgContractAddress) {
-  contract = new ethers.Contract(UserData?.orgContractAddress, OrgContractABI, signer);
-}
+import ConfirmModal from '../Common/confirmPopup';
+
 
 interface DecryptedFile {
   documentName: string;
@@ -44,15 +36,28 @@ export default function UserDashboard() {
   const [selectedUser, setSelectedUser] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const usersPerPage = 10;
   const [activeTab, setActiveTab] = useState("Dashboard");
-  const location = useLocation();
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [pendingApprovalData, setPendingApprovalData] = useState<{ walletAddress: string; index: number; cid: string, approved: string } | null>(null);
+  const [messageForConfirmPopup, setMessageForConfirmPopup] = useState('');
+  const [forSpecialCall, setForSpecialCall] = useState(false);
+  const usersPerPage = 10;
   const navigate = useNavigate();
-  const adminLocalData = location.state?.admin;
-  const localUserData = JSON.parse(localStorage.getItem("user") || "{}");
   const modalRef = useRef<HTMLDivElement>(null);
   let decryptedDocs: DecryptedFile[] = [];
   const [circularLoading, setCircularLoading] = useState(false);
+  const provider = new ethers.providers.JsonRpcProvider(config.URL_RPC);
+  const location = useLocation();
+  const adminLocalData = location.state?.admin;
+  const localUserData = adminLocalData ? adminLocalData : JSON.parse(localStorage.getItem("user") || "{}");
+  let signer;
+  if (localUserData?.privateKey) {
+    signer = new ethers.Wallet(localUserData?.privateKey, provider);
+  }
+  let contract: any;
+  if (localUserData?.orgContractAddress) {
+    contract = new ethers.Contract(localUserData?.orgContractAddress, OrgContractABI, signer);
+  }
 
   useEffect(() => {
     const handleOutsideClick = (event: MouseEvent) => {
@@ -72,13 +77,12 @@ export default function UserDashboard() {
     try {
       setCircularLoading(true);
       const response = await contract.getAllUsers();
-      // console.log(response, "response")
       const userData = [];
       for (let i = 0; i < response.length; i++) {
         const walletAddress = response[i];
         const userwithsetail = await axios.get(`${config.URL_BACKEND}api/auth/userListByWalletAddress?walletAddress=${walletAddress}`);
         const documents = await contract.getAllDocuments(walletAddress);
-        console.log(documents, "documents form contract")
+        // console.log(documents, "documents form contract")
         try {
           const results = await Promise.all(
             documents.map(async (file: any, index: number) => {
@@ -140,7 +144,6 @@ export default function UserDashboard() {
           console.error('Overall IPFS file fetch error:', err);
         }
 
-
         let userFiles = documents.map((doc: any, index: number) => ({
           url: `https://ipfs.io/ipfs/${doc[0]}`,
           approved: doc[3],
@@ -152,6 +155,8 @@ export default function UserDashboard() {
           name: userwithsetail.data.user.name,
           email: userwithsetail.data.user.email,
           walletAddress,
+          orgContractAddress: userwithsetail.data.user.orgContractAddress,
+          privateKey: userwithsetail.data.user.privateKey,
           isBlocked: userwithsetail.data.user.isBlocked,
           files: userFiles.length,
           fileLinks: decryptedDocs,
@@ -169,93 +174,95 @@ export default function UserDashboard() {
 
   useEffect(() => {
     fetchUsers();
-  }, []);
+  }, [forSpecialCall]);
 
-  const approve = async (walletAddress: string, index: number, cid: string) => {
+  const handleApprove = async (walletAddress: string, index: number, cid: string, approveOrNot?: string) => {
+    let key: boolean;
+    let apiKey: string;
+    if (approveOrNot == 'approve') {
+      key = true;
+      apiKey = 'approvedBy';
+    } else {
+      key = false;
+      apiKey = 'rejectedBy';
+    }
+    const tx = await contract.verifyDocument(walletAddress, index, key);
+    await tx.wait();
     try {
-      try {
-        const tx = await contract.verifyDocument(walletAddress, index, true);
-        await tx.wait();
-      } catch (error: any) {
-        console.log("error====>", error)
-      }
-
-      try {
-        const response = await axios.post(`${config.URL_BACKEND}api/auth/approveDocument`, { cid, approvedBy: localUserData?._id },
-          { headers: { _token: localUserData?.token } }
-        );
-        if (response.status === 200) {
-          console.log(response.data)
-        }
-      } catch (error: any) {
-        console.log(error)
-      }
-
-      ToastMessage("Document Approved Successfully", "success", "");
-      setUsers((prevUsers) =>
-        prevUsers.map((user) =>
-          user.walletAddress === walletAddress
-            ? {
-              ...user,
-              fileLinks: user.fileLinks.map((file: any, i: any) =>
-                i === index ? { ...file, approved: true } : file
-              ),
-              status: user.fileLinks.every((file: any, i: any) => i === index || file.approved)
-                ? "Approved"
-                : "Pending",
-            }
-            : user
-        )
+      const response = await axios.post(`${config.URL_BACKEND}api/auth/approveDocument`, { cid, [apiKey]: localUserData?._id },
+        { headers: { _token: localUserData?.token } }
       );
-      setShowModal(false);
+      if (response.status === 200) {
+        console.log(response.data)
+      }
+    } catch (error: any) {
+      console.log(error)
+    }
+    ToastMessage(`Document ${approveOrNot} Successfully`, "success", "");
+
+    setUsers((prevUsers) =>
+      prevUsers.map((user) =>
+        user.walletAddress === walletAddress
+          ? {
+            ...user,
+            fileLinks: user.fileLinks.map((file: any, i: any) =>
+              i === index ? { ...file, approved: true } : file
+            ),
+            status: user.fileLinks.every((file: any, i: any) => i === index || file.approved)
+              ? "Approved"
+              : "Pending",
+          }
+          : user
+      )
+    ); 
+    setShowModal(false);
+    setShowConfirmModal(false);
+    setPendingApprovalData(null);
+    setForSpecialCall(!forSpecialCall)
+  };
+
+  const approve = async (walletAddress: string, index: number, cid: string, approveafterreject?: boolean) => {
+    try {
+      if (adminLocalData) {
+        ToastMessage("Only Organization Admin can approve documents", "error", "");
+        return;
+      }
+      const approveOrNot = 'approve';
+      if (approveafterreject) {
+        setShowConfirmModal(true);
+        setShowModal(false);
+        setPendingApprovalData({ walletAddress, index, cid, approved: approveOrNot });
+        setMessageForConfirmPopup('Are you sure you want to approve this document?');
+      } else {
+        await handleApprove(walletAddress, index, cid, approveOrNot);
+      }
     } catch (error: any) {
       console.log("error====>", error)
       ToastMessage(`${error}`, "error", "");
     }
   };
 
-  const reject = async (walletAddress: string, index: number, cid: string) => {
+  const reject = async (walletAddress: string, index: number, cid: string, approveafterreject?: boolean) => {
     try {
-      try {
-        const tx = await contract.verifyDocument(walletAddress, index, false);
-        await tx.wait();
-      } catch (error: any) {
-        console.log("error====>", error)
+      if (adminLocalData) {
+        ToastMessage("Only Organization Admin can reject documents", "error", "");
+        return;
       }
-
-      try {
-        const response = await axios.post(`${config.URL_BACKEND}api/auth/rejectDocument`, { cid, rejectedBy: localUserData?._id },
-          { headers: { _token: localUserData?.token } }
-        );
-        if (response.status === 200) {
-          console.log(response.data)
-        }
-      } catch (error: any) {
-        console.log(error)
+      const approveOrNot = 'reject';
+      if (approveafterreject) {
+        setShowConfirmModal(true);
+        setShowModal(false);
+        setPendingApprovalData({ walletAddress, index, cid, approved: approveOrNot });
+        setMessageForConfirmPopup('Are you sure you want to reject this document?');
+      } else {
+        await handleApprove(walletAddress, index, cid, approveOrNot);
       }
-
-      ToastMessage("Document Rejected Successfully", "success", "");
-      setUsers((prevUsers) =>
-        prevUsers.map((user) =>
-          user.walletAddress === walletAddress
-            ? {
-              ...user,
-              fileLinks: user.fileLinks.map((file: any, i: any) =>
-                i === index ? { ...file, approved: true } : file
-              ),
-              status: user.fileLinks.every((file: any, i: any) => i === index || file.approved)
-                ? "Approved"
-                : "Pending",
-            }
-            : user
-        )
-      );
-      setShowModal(false);
     } catch (error: any) {
       console.log("error====>", error)
       ToastMessage(`${error}`, "error", "");
     }
   }
+
 
   const openModal = (user: any) => {
     setSelectedFiles(user.fileLinks);
@@ -355,98 +362,95 @@ export default function UserDashboard() {
 
             </div>
             {
-
-              circularLoading ? <div className="flex justify-center items-center mt-50 h-80">
-                <CircularLoader size={30} />
-              </div> :
-                !currentUsers.length ? (<><p className="text-center text-gray-600">No users found</p></>)
-                  :
-                  <>
-                    <div className="overflow-x-auto rounded-xl bg-white shadow">
-                      <table className="w-full table-auto border-collapse text-sm">
-                        <thead className="bg-gray-100 text-gray-800 text-lg font-semibold">
-                          <tr>
-                            <th className="py-4 px-6 text-left">User Name</th>
-                            <th className="py-4 px-6 text-left">Email</th>
-                            <th className="py-4 px-6 text-center">Documents</th>
-                            <th className="py-4 px-6 text-left">Preview</th>
-                            <th className="py-4 px-6 text-center">Status</th>
-                            <th className="py-4 px-6 text-center">Action</th>
+              !currentUsers.length ? (<><p className="text-center text-gray-600">No users found</p></>)
+                :
+                <>
+                  <div className="overflow-x-auto rounded-xl bg-white shadow">
+                    <table className="w-full table-auto border-collapse text-sm">
+                      <thead className="bg-gray-100 text-gray-800 text-lg font-semibold">
+                        <tr>
+                          <th className="py-4 px-6 text-left">User Name</th>
+                          <th className="py-4 px-6 text-left">Email</th>
+                          <th className="py-4 px-6 text-center">Documents</th>
+                          <th className="py-4 px-6 text-left">Preview</th>
+                          <th className="py-4 px-6 text-center">Status</th>
+                          <th className="py-4 px-6 text-center">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody className="text-gray-700">
+                        {circularLoading ? <div className="flex justify-center items-center mt-50 h-80">
+                          <CircularLoader size={30} />
+                        </div> : currentUsers.map((user, i) => (
+                          <tr key={i} className="border-b border-gray-200 hover:bg-gray-50 transition">
+                            <td className="py-4 px-6">{user.name}</td>
+                            <td className="py-4 px-6">{user.email}</td>
+                            <td className="py-4 px-6 text-center">{user.files}</td>
+                            <td className="py-4 px-6 text-center">
+                              {user.fileLinks.length > 0 ? (
+                                <button onClick={() => openModal(user)} className="text-blue-600 hover:text-blue-800 font-medium flex justify-center items-center gap-1">
+                                  <FaEye /> View Files
+                                </button>
+                              ) : 'No Files'}
+                            </td>
+                            <td className="py-4 px-6 text-center">
+                              {user.status === "Approved" ? (
+                                <span className="text-green-600 flex items-center justify-center gap-1">
+                                  {user.fileLinks.length > 0 ? <> <FaCheckCircle /> Approved</> : 'Not Yet'}
+                                </span>
+                              ) : (
+                                <span className="text-yellow-500 flex items-center justify-center gap-1">
+                                  <FaTimesCircle /> Pending
+                                </span>
+                              )}
+                            </td>
+                            <td className="py-4 px-6 text-center flex gap-2 justify-center">
+                              {user.isBlocked ? (
+                                <button onClick={() => blockUser(user.id)} className="text-red-600"><img src={blockIcon} alt="" className="w-5 h-5 cursor-pointer" /></button>
+                              ) : (
+                                <button onClick={() => unblockUser(user.id)} className="text-green-600"><img src={unblock} alt="" className="w-5 h-5 cursor-pointer" /></button>
+                              )}
+                              <FaEye onClick={() => navigateUserdahsboard(user)} className="w-5 h-5 cursor-pointer" />
+                            </td>
                           </tr>
-                        </thead>
-                        <tbody className="text-gray-700">
-                          {currentUsers.map((user, i) => (
-                            <tr key={i} className="border-b border-gray-200 hover:bg-gray-50 transition">
-                              <td className="py-4 px-6">{user.name}</td>
-                              <td className="py-4 px-6">{user.email}</td>
-                              <td className="py-4 px-6 text-center">{user.files}</td>
-                              <td className="py-4 px-6 text-center">
-                                {user.fileLinks.length > 0 ? (
-                                  <button onClick={() => openModal(user)} className="text-blue-600 hover:text-blue-800 font-medium flex justify-center items-center gap-1">
-                                    <FaEye /> View Files
-                                  </button>
-                                ) : 'No Files'}
-                              </td>
-                              <td className="py-4 px-6 text-center">
-                                {user.status === "Approved" ? (
-                                  <span className="text-green-600 flex items-center justify-center gap-1">
-                                    {user.fileLinks.length > 0 ? <> <FaCheckCircle /> Approved</> : 'Not Yet'}
-                                  </span>
-                                ) : (
-                                  <span className="text-yellow-500 flex items-center justify-center gap-1">
-                                    <FaTimesCircle /> Pending
-                                  </span>
-                                )}
-                              </td>
-                              <td className="py-4 px-6 text-center flex gap-2 justify-center">
-                                {user.isBlocked ? (
-                                  <button onClick={() => blockUser(user.id)} className="text-red-600"><img src={blockIcon} alt="" className="w-5 h-5 cursor-pointer" /></button>
-                                ) : (
-                                  <button onClick={() => unblockUser(user.id)} className="text-green-600"><img src={unblock} alt="" className="w-5 h-5 cursor-pointer" /></button>
-                                )}
-                                <FaEye onClick={() => navigateUserdahsboard(user)} className="w-5 h-5 cursor-pointer" />
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
 
-                    <div className="flex justify-between items-center mt-6 px-4">
-                      <button
-                        onClick={prevPage}
-                        disabled={currentPage === 1}
-                        className={`px-5 py-2 rounded-xl font-semibold text-white transition ${currentPage === 1 ? "bg-gray-400 cursor-not-allowed" : "bg-blue-500 hover:bg-blue-600"
-                          }`}
-                      >
-                        Previous
-                      </button>
-                      <span className="text-gray-600 text-lg font-medium">
-                        Page {currentPage} of {Math.ceil(users.length / usersPerPage)}
-                      </span>
-                      <button
-                        onClick={nextPage}
-                        disabled={currentPage === Math.ceil(users.length / usersPerPage)}
-                        className={`px-5 py-2 rounded-xl font-semibold text-white transition ${currentPage === Math.ceil(users.length / usersPerPage)
-                          ? "bg-gray-400 cursor-not-allowed"
-                          : "bg-blue-500 hover:bg-blue-600"
-                          }`}
-                      >
-                        Next
-                      </button>
-                    </div>
+                  <div className="flex justify-between items-center mt-6 px-4">
+                    <button
+                      onClick={prevPage}
+                      disabled={currentPage === 1}
+                      className={`px-5 py-2 rounded-xl font-semibold text-white transition ${currentPage === 1 ? "bg-gray-400 cursor-not-allowed" : "bg-blue-500 hover:bg-blue-600"
+                        }`}
+                    >
+                      Previous
+                    </button>
+                    <span className="text-gray-600 text-lg font-medium">
+                      Page {currentPage} of {Math.ceil(users.length / usersPerPage)}
+                    </span>
+                    <button
+                      onClick={nextPage}
+                      disabled={currentPage === Math.ceil(users.length / usersPerPage)}
+                      className={`px-5 py-2 rounded-xl font-semibold text-white transition ${currentPage === Math.ceil(users.length / usersPerPage)
+                        ? "bg-gray-400 cursor-not-allowed"
+                        : "bg-blue-500 hover:bg-blue-600"
+                        }`}
+                    >
+                      Next
+                    </button>
+                  </div>
 
-                  </>
+                </>
 
             }
-            {/* {console.log(selectedFiles,'selectedFiles')} */}
             {showModal && (
-              <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center px-4">
-                <div ref={modalRef} className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[85vh]  p-8 overflow-y-auto scrollbar-hide">
+              <div  className="fixed inset-0 z-50 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center px-4">
+                <div ref={modalRef} className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[85vh]  p-8 overflow-y-auto scrollbar-hide">
                   <h3 className="text-2xl font-bold text-gray-800 mb-6 text-center">File Previews</h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
                     {selectedFiles.map((file, index) => (
-                      <div key={index} className="flex flex-col items-center bg-gray-50 p-4 rounded-lg shadow">
+                      <div key={index} className="flex flex-col items-center bg-gray-50 p-2 rounded-lg shadow">
                         <a href={file.url} target="_blank" rel="noopener noreferrer">
                           <img
                             src={file.url}
@@ -472,11 +476,11 @@ export default function UserDashboard() {
                           </>
                         ) :
                           file.approved == 1 ? (
-                            <span className="mt-2 text-green-600 flex items-center gap-1">
+                            <span className="mt-2 text-green-600 flex border border-green-500 p-1 pl-2 pr-2 rounded-lg hover:bg-green-600 hover:text-white items-center cursor-pointer gap-1" onClick={() => selectedUser && reject(selectedUser, file.index, file.cid, true)}>
                               <FaCheckCircle className="w-5 h-5" /> Approved
                             </span>
                           ) :
-                            <span className="mt-2 text-red-600 flex items-center gap-1">
+                            <span className="mt-2 text-red-600 flex border border-red-500 p-1 pl-2 pr-2 rounded-lg hover:bg-red-600 hover:text-white items-center cursor-pointer gap-1" onClick={() => selectedUser && approve(selectedUser, file.index, file.cid, true)}>
                               <FaBan className="w-5 h-5" /> Rejected
                             </span>
                         }
@@ -501,6 +505,24 @@ export default function UserDashboard() {
           </>
         )}
       </div>
+
+      <ConfirmModal
+        isOpen={showConfirmModal}
+        message={messageForConfirmPopup}
+        onConfirm={() => {
+          if (pendingApprovalData) {
+            const { walletAddress, index, cid, approved } = pendingApprovalData;
+            handleApprove(walletAddress, index, cid, approved);
+          }
+          setShowConfirmModal(false);
+          setPendingApprovalData(null);
+        }}
+        onCancel={() => {
+          setShowConfirmModal(false);
+          setPendingApprovalData(null);
+        }}
+      />
+
     </div>
 
   );

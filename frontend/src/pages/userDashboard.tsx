@@ -40,9 +40,13 @@ const UserDashboard: React.FC = () => {
     const [uploadProgress, setUploadProgress] = useState<number>(0);
     const [isCircularLoading, setIsCirculrLoading] = useState(false);
     const [signer, setSigner] = useState<ethers.Signer | null>(null);
-    const [loading, setLoading] = useState(false);
-    const [orgContractAddress, setOrgContractAddress] = useState('');
-    const [organizations, setOrganizations] = useState([]);
+    const [orgContractAddress, setOrgContractAddress] = useState<any>([]);
+    interface Organization {
+        orgContractAddress: string;
+        [key: string]: any;
+    }
+
+    const [organizations, setOrganizations] = useState<Organization[]>([]);
     // const approvedDocs = dummyDocuments.filter((doc) => doc.status === "approved");
     // const rejectedDocs = dummyDocuments.filter((doc) => doc.status === "rejected");
     const rejectedDocs = [];
@@ -54,6 +58,7 @@ const UserDashboard: React.FC = () => {
         name: '',
         type: '',
         documentId: '',
+        selectHoldData: '',
     });
     const location = useLocation();
     const adminUser = location.state?.user;
@@ -64,7 +69,6 @@ const UserDashboard: React.FC = () => {
             const response = await axios.get(`${config.URL_BACKEND}api/auth/getAllOrganization`, {
                 headers: { _token: userData?.token }
             })
-            // console.log(response.data, "response")
             setOrganizations(response.data.data)
         } catch (error) {
             console.log(error, "error")
@@ -77,9 +81,27 @@ const UserDashboard: React.FC = () => {
     const handleChange = async (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
         if (name === 'type') {
-            setOrgContractAddress(value)
+            if (value == '') {
+                setFormData(prev => ({
+                    ...prev,
+                    selectHoldData: '',
+                    type: '',
+                }));
+                return;
+            }
+            const parsed = JSON.parse(value)
+            setOrgContractAddress(parsed.orgContractAddress)
+
+            setFormData(prev => ({
+                ...prev,
+                type: parsed.organization,
+                selectHoldData: value,
+            }));
         }
-        setFormData(prev => ({ ...prev, [name]: value }));
+        else {
+            setFormData(prev => ({ ...prev, [name]: value }));
+        }
+
     };
     useEffect(() => {
         async function getSigner() {
@@ -102,12 +124,39 @@ const UserDashboard: React.FC = () => {
         getSigner();
     }, [Jsonprovider]);
 
+
+    // useEffect(() => {
+    //     if (userData?.walletAddress) {
+    //             const contract = new ethers.Contract(userData?.orgContractAddress, OrgContractABI, Jsonprovider);
+    //             contract.getApprovedDocuments(userData.walletAddress).then(setIpfsFile).finally(() => setLoading(false));
+    //     }
+    // }, [userData?.walletAddress]);
     useEffect(() => {
-        if (userData?.walletAddress) {
-            const contract = new ethers.Contract(userData?.orgContractAddress, OrgContractABI, Jsonprovider);
-            contract.getApprovedDocuments(userData.walletAddress).then(setIpfsFile).finally(() => setLoading(false));
-        }
-    }, [userData?.walletAddress]);
+        const fetchApprovedDocuments = async () => {
+            if (!userData?.walletAddress || organizations.length === 0) return;
+            try {
+                const results = await Promise.all(
+                    organizations.map(async (org) => {
+                        const contract = new ethers.Contract(
+                            org.orgContractAddress,
+                            OrgContractABI,
+                            Jsonprovider
+                        );
+                        return await contract.getApprovedDocuments(userData.walletAddress);
+                    })
+                );
+
+                const flattened = results.flat();
+                setIpfsFile(flattened);
+            } catch (error) {
+                console.error("Error fetching approved documents:", error);
+            }
+        };
+
+        fetchApprovedDocuments();
+    }, [userData?.walletAddress, organizations]);
+
+
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -187,7 +236,6 @@ const UserDashboard: React.FC = () => {
 
     const fetchFiles = async (filter: string = "all") => {
         setIsCirculrLoading(true);
-        setLoading(true);
         const decryptedDocs: DecryptedFile[] = [];
 
         try {
@@ -246,7 +294,8 @@ const UserDashboard: React.FC = () => {
                 setIpfsContents(decryptedDocs); // Final result
                 setIsCirculrLoading(false);
             } else {
-                const filteredContents = decryptedDocs.filter((item: any) => item.type === filter);
+                const orgFilter = JSON.parse(filter);
+                const filteredContents = decryptedDocs.filter((item: any) => item.type === orgFilter.organization);
                 setIpfsContents(filteredContents);
                 setIsCirculrLoading(false);
             }
@@ -254,8 +303,6 @@ const UserDashboard: React.FC = () => {
             setIsCirculrLoading(false);
             console.error('Overall IPFS file fetch error:', err);
         }
-
-        setLoading(false);
     };
     useEffect(() => {
         if (ipfsFile?.length > 0) {
@@ -343,7 +390,6 @@ const UserDashboard: React.FC = () => {
 
     const handleUpload = async () => {
         setIsCirculrLoading(true);
-        console.log(files, 'files')
         if (files.length === 0) {
             setIsCirculrLoading(false);
             ToastMessage("Please select a file.", "error", "");
@@ -409,6 +455,7 @@ const UserDashboard: React.FC = () => {
                 name: '',
                 type: '',
                 documentId: '',
+                selectHoldData: '',
             })
             await uploadToContract(foldercid2, formData.type);
         }
@@ -422,7 +469,6 @@ const UserDashboard: React.FC = () => {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        console.log(formData, 'formData')
         if (!formData.name || !formData.type || !formData.documentId) {
             ToastMessage("Please fill out all fields.", "error", "");
             return;
@@ -499,7 +545,10 @@ const UserDashboard: React.FC = () => {
                                             >
                                                 <option value="all">All</option>
                                                 {organizations.map((org: any, index) => (
-                                                    <option key={index} value={org.orgContractAddress}>
+                                                    <option key={index} value={JSON.stringify({
+                                                        orgContractAddress: org.orgContractAddress,
+                                                        organization: org.organization,
+                                                    })}>
                                                         {org.organization}
                                                     </option>
                                                 ))}
@@ -702,13 +751,18 @@ const UserDashboard: React.FC = () => {
                                             <select
                                                 id="type"
                                                 name="type"
-                                                value={formData.type}
+                                                value={formData.selectHoldData}
                                                 onChange={handleChange}
                                                 className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500"
                                             >
                                                 <option value="">Select document type</option>
                                                 {organizations.map((org: any, index) => (
-                                                    <option key={index} value={org.orgContractAddress}>
+                                                    <option key={index}
+                                                        value={JSON.stringify({
+                                                            orgContractAddress: org.orgContractAddress,
+                                                            organization: org.organization,
+                                                        })}
+                                                    >
                                                         {org.organization}
                                                     </option>
                                                 ))}

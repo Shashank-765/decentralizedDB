@@ -9,7 +9,7 @@ import CircularLoader from "../CircularLoader/CircularLoader";
 import walletImage from '../assets/wallet.png'
 import copyImage from '../assets/copy.png'
 import config from "../../config.json"
-import { useWeb3AuthConnect, useWeb3AuthDisconnect, useWeb3AuthUser, useWeb3Auth } from "@web3auth/modal/react";
+import { useWeb3AuthConnect, useWeb3AuthDisconnect, useWeb3AuthUser } from "@web3auth/modal/react";
 import { useAccount } from "wagmi";
 import profilelogo from '../assets/user.png'
 import { WithdrawModal, QrcodeModel } from "./Modals";
@@ -46,9 +46,14 @@ function Header() {
     async function getPrivateKey() {
       try {
         const ethersProvider = new ethers.providers.JsonRpcProvider(config.URL_RPC);
-        const signer = new ethers.Wallet(user?.privateKey, ethersProvider);
-        const balance = await signer.getBalance();
-        setWalletBalance(ethers.utils.formatEther(balance));
+        let signer;
+        if (user?.privateKey) {
+          signer = new ethers.Wallet(user?.privateKey, ethersProvider);
+        }
+        if (signer) {
+          const balance = await signer.getBalance();
+          setWalletBalance(ethers.utils.formatEther(balance));
+        }
       }
       catch (error) {
         console.log(error, "<--------------------------------error");

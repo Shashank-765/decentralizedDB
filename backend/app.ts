@@ -30,3 +30,8 @@ app.use(errorHandler);
 
 
 export default app
+
+let arr =[1,2,-5,6,-9,0,-1,6];
+ for(let i=0;i<arr.length;i++){
+    
+ }

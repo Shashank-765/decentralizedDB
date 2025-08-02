@@ -49,8 +49,8 @@ export const userList = async (req: Request, res: Response) => {
 };
 export const blockUser = async (req: Request, res: Response) => {
     try {
-        const { _id } = req.body;
-        const user = await authService.blockUser(_id);
+        const { id } = req.body;
+        const user = await authService.blockUser(id);
         res.status(200).json({ message: "User blocked successfully", user });
     } catch (error: any) {
         res.status(400).json({ error: error.message });
@@ -58,8 +58,8 @@ export const blockUser = async (req: Request, res: Response) => {
 };
 export const unblockUser = async (req: Request, res: Response) => {
     try {
-        const { _id } = req.body;
-        const user = await authService.unblockUser(_id);
+        const { id } = req.body;
+        const user = await authService.unblockUser(id);
         res.status(200).json({ message: "User unblocked successfully", user });
     } catch (error: any) {
         res.status(400).json({ error: error.message });
@@ -160,8 +160,9 @@ export const getAllOrganization = async (req: Request, res: Response) => {
 }
 export const getAllAdminsByWalletAddress = async (req: Request, res: Response) => {
     try {
-        const { walletAddress } = req.query;
-        const data = await authService.getAllAdminsByWalletAddress(walletAddress as string);
+        const { walletAddresses } = req.query;
+
+        const data = await authService.getAllAdminsByWalletAddress(walletAddresses as string);
         res.status(200).json({ message: "Admin Fetched successful", data });
     } catch (error: any) {
         res.status(400).json({ error: error.message });

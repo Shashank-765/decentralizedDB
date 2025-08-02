@@ -100,7 +100,7 @@ const SuperAdminDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState("Dashboard");
   const [isCreateModelOpen, setIsCreateModelOpen] = useState(false);
   const [dataToSend, setdataToSend] = useState({ name: "", email: "", organization: "", orgContractAddress: "" })
-  const [allUsers, setAllUsers] = useState<any>([]);
+  // const [allUsers, setAllUsers] = useState<any>([]);
   const [allAdmins, setAllAdmins] = useState<any>([]);
   const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff8042'];
   const [graphData, setGraphData] = useState([]);
@@ -109,7 +109,7 @@ const SuperAdminDashboard: React.FC = () => {
   const [endDate, setEndDate] = useState(today.toISOString().split('T')[0]);
   const localUserData = JSON.parse(localStorage.getItem("user") || "{}");
   const [allBalances, setAllBalances] = useState<any>([]);
-  const totalUsers = allUsers.length;
+  // const totalUsers = allUsers.length;
   const totalAdmins = allAdmins.length;
   const approvedDocs = dummyDocuments.filter((doc: any) => doc.status === "approved");
   const rejectedDocs = dummyDocuments.filter((doc: any) => doc.status === "rejected");
@@ -179,9 +179,7 @@ const SuperAdminDashboard: React.FC = () => {
       const contractResponse = await SuperAdminContract.createOrganization(localUserDataweallet2, dataToSend.organization, { value: ethers.utils.parseEther("0.1") }
       );
       const receipt = await contractResponse.wait();
-      console.log(receipt, "receipt")
       setIsCreateModelOpen(false);
-
       const getAllOrgs = await SuperAdminContract.getAllOrgs();
 
       if (receipt.status === 1) {
@@ -235,17 +233,16 @@ const SuperAdminDashboard: React.FC = () => {
 
   const fetchAllAdmins = async () => {
     const getAllOrgs = await SuperAdminContract.getAllOrgs();
+    const getAllOrgsWalletAddresses: string[] = getAllOrgs.map((org: { orgAdmin: string }) => org.orgAdmin);
     const getallbalance = await SuperAdminContract.getAllOrgAdminBalances();
     setAllBalances(getallbalance[1])
-    for (let i = 0; i < getAllOrgs.length; i++) {
-      try {
-        const response = await axios.get(`${config.URL_BACKEND}api/auth/getAllAdminsByWalletAddress?walletAddress=${getAllOrgs[i].orgAdmin}`);
-        if (response.status === 200) {
-          setAllAdmins((prev: any) => [...prev, response.data.data]);
-        }
-      } catch (error) {
-        console.log(error)
+    try {
+      const response = await axios.get(`${config.URL_BACKEND}api/auth/getAllAdminsByWalletAddress?walletAddresses=${getAllOrgsWalletAddresses}`);
+      if (response.status === 200) {
+        setAllAdmins(response.data.data);
       }
+    } catch (error) {
+      console.log(error)
     }
   }
 
@@ -255,9 +252,9 @@ const SuperAdminDashboard: React.FC = () => {
   }, [])
 
 
-  const blockUser = async (_id: string, userType: string) => {
+  const blockUser = async (id: string, userType: string) => {
     try {
-      await axios.post(`${config.URL_BACKEND}api/auth/blockUser`, { _id },
+      await axios.post(`${config.URL_BACKEND}api/auth/blockUser`, { id },
         { headers: { _token: localUserData?.token } }
       );
       ToastMessage("User UnBlocked Successfully", "success", "");
@@ -271,9 +268,9 @@ const SuperAdminDashboard: React.FC = () => {
     }
   };
 
-  const unblockUser = async (_id: string, userType: string) => {
+  const unblockUser = async (id: string, userType: string) => {
     try {
-      await axios.post(`${config.URL_BACKEND}api/auth/unblockUser`, { _id },
+      await axios.post(`${config.URL_BACKEND}api/auth/unblockUser`, { id },
         { headers: { _token: localUserData?.token } }
       );
       ToastMessage("User Blocked Successfully", "success", "");
@@ -411,7 +408,7 @@ const SuperAdminDashboard: React.FC = () => {
         {activeTab === "Dashboard" &&
           <>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-              <StatCard label="Total Users" value={totalUsers} color="blue" />
+              {/* <StatCard label="Total Users" value={totalUsers} color="blue" /> */}
               <StatCard label="Total Admins" value={totalAdmins} color="purple" />
               <StatCard label="Total Approved" value={approvedDocs.length} color="green" />
               <StatCard label="Total Rejected" value={rejectedDocs.length} color="red" />
@@ -433,12 +430,12 @@ const SuperAdminDashboard: React.FC = () => {
                       </tr>
                     </thead>
                     <tbody className="text-gray-800">
-                      {allAdmins?.map((admin: any, index: any) => (
+                      {allAdmins.length > 0 && allAdmins.slice(0,5)?.map((admin: any, index: any) => (
                         <tr key={index} className="border-t hover:bg-gray-50 transition">
-                          <td className="py-4 px-6 text-base">{admin.name}</td>
-                          <td className="py-4 px-6 text-base">{admin.email}</td>
-                          <td className="py-4 px-6 text-base">{admin.userType}</td>
-                          <td className="py-4 px-6 text-base">{Number(ethers.utils.formatEther(allBalances[index])).toFixed(2)}</td>
+                          <td className="py-4 px-6 text-base">{admin?.name}</td>
+                          <td className="py-4 px-6 text-base">{admin?.email}</td>
+                          <td className="py-4 px-6 text-base">{admin?.userType}</td>
+                          <td className="py-4 px-6 text-base">{allBalances[index] ? Number(ethers.utils.formatEther(allBalances[index])).toFixed(2) : "0"}</td>
                           <td className="py-4 px-6 text-base flex gap-2 justify-center">
                             {/* <button className="text-white px-2 py-1 rounded-full text-sm font-medium transition"> */}
                             {admin.isBlocked ? (
@@ -510,11 +507,12 @@ const SuperAdminDashboard: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody className="text-gray-800">
-                    {allAdmins.map((admin: any, index: any) => (
+                    {allAdmins.length > 0 && allAdmins.map((admin: any, index: any) => (
                       <tr key={index} className="border-t hover:bg-gray-50 transition">
                         <td className="py-4 px-6 text-base">{admin.name}</td>
                         <td className="py-4 px-6 text-base">{admin.email}</td>
                         <td className="py-4 px-6 text-base">{admin.userType}</td>
+                        <td className="py-4 px-6 text-base">{allBalances[index] ? Number(ethers.utils.formatEther(allBalances[index])).toFixed(2) : "0"}</td>
                         <td className="py-4 px-6 text-base flex gap-2 justify-center">
 
                           {/* <button className="bg-indigo-500 hover:bg-indigo-600 text-white px-2 py-1 rounded-full text-sm font-medium transition"> */}

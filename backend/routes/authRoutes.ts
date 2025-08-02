@@ -25,6 +25,6 @@ router.post('/fakeDataToStore',fakeDataToStore)
 router.get('/userListByWalletAddress',userListByWalletAddress)
 router.get('/getAllAdminsByWalletAddress',getAllAdminsByWalletAddress)
 router.get('/getOrganizationContractAddress',authorize,getOrganizationContractAddress)
-router.get('/getAllOrganization',authorize,getAllOrganization)
+router.get('/getAllOrganization',getAllOrganization)
 
 export default router;
