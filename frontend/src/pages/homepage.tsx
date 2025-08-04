@@ -69,7 +69,7 @@ export default function Homepage() {
                 </p>
               </div>
             </div>
-  
+
             {/* Second Row of Cards */}
             <div className="flex justify-center gap-12 mt-8 pb-6 bodycontainer2">
               {/* Step 4 */}

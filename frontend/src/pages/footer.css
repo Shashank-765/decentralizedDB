@@ -1,7 +1,7 @@
-
-.editbutton{
- text-align: right;
+.editbutton {
+  text-align: right;
 }
+
 .forgot-password-container {
   display: flex;
   justify-content: center;
@@ -70,9 +70,10 @@
   transition: background-color 0.3s ease;
   margin-top: 10px;
 }
-.resetbuttonpass{
-    padding: 10px;
-    background-color: #0056b3;
+
+.resetbuttonpass {
+  padding: 10px;
+  background-color: #0056b3;
 }
 
 
@@ -113,12 +114,13 @@
     padding: 10px 12px;
   }
 }
+
 @media screen and (max-width:800px) {
-    .containerimage{
-      width:60%
-    
-    }
+  .containerimage {
+    width: 60%
+  }
 }
+
 .edit-container {
   border-radius: 20px;
   box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25);
@@ -151,50 +153,61 @@
   border-radius: 6px;
   border: 1px solid #ccc;
 }
-.passwordfield{
+
+.passwordfield {
   padding: 10px;
   font-size: 16px;
   border-radius: 6px;
   border: 1px solid #ccc;
   width: 82%;
 }
+
 @media screen and (max-width:500px) {
-  .passwordfield{
+  .passwordfield {
     width: 80%;
-  } 
-  .edit-container{
+  }
+
+  .edit-container {
     max-width: 460px;
   }
 }
+
 @media screen and (max-width:470px) {
-  .passwordfield{
+  .passwordfield {
     width: 78%;
-  } 
-   .edit-container{
+  }
+
+  .edit-container {
     max-width: 420px;
   }
 }
+
 @media screen and (max-width:450px) {
-  .passwordfield{
+  .passwordfield {
     width: 78%;
-  } 
-   .edit-container{
+  }
+
+  .edit-container {
     max-width: 400px;
   }
 }
+
 @media screen and (max-width:400px) {
-  .passwordfield{
+  .passwordfield {
     width: 76%;
-  } 
-   .edit-container{
+  }
+
+  .edit-container {
     max-width: 375px;
   }
 }
+
 @media screen and (max-width:370px) {
-  .passwordfield{
+  .passwordfield {
     width: 72%;
-  } 
+  }
 }
+
 .edit-form input:focus,
 .edit-form select:focus {
   outline: none;
@@ -230,16 +243,19 @@
   display: block;
   animation: fadeIn 0.3s ease-in-out;
 }
+
 @keyframes fadeIn {
   from {
     opacity: 0;
     transform: translateY(-2px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
   }
 }
+
 .password-wrapper {
   position: relative;
 }
@@ -254,83 +270,95 @@
   color: #007bff;
   cursor: pointer;
 }
+
 input[type=number]::-webkit-outer-spin-button,
 input[type=number]::-webkit-inner-spin-button {
   -webkit-appearance: none;
   margin: 0;
 }
-.editbuttons{
-display: flex;
-align-self: end;
+
+.editbuttons {
+  display: flex;
+  align-self: end;
 }
+
 /* Remove spinner for Firefox */
 input[type=number] {
   -moz-appearance: textfield;
 }
 
 @media screen and (max-width: 1400px) {
-    .containerfooter{
-      display: flex !important;
-      justify-content: space-between !important;  
-    }
-    
+  .containerfooter {
+    display: flex !important;
+    justify-content: space-between !important;
+  }
+
 }
 
 @media screen and (max-width: 768px) {
-    .footerupperconter1{
-         display: flex;
-        justify-content: space-around; 
-    }
-    .footerupperconter2{
-        display: flex;
-        justify-content: center; 
-    }
-    .containerfooter{
-        display: flex;
-        flex-direction: column;
-        justify-content: center; 
-        align-items: center;    
-    }
+  .footerupperconter1 {
+    display: flex;
+    justify-content: space-around;
+  }
+
+  .footerupperconter2 {
+    display: flex;
+    justify-content: center;
+  }
+
+  .containerfooter {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+  }
 }
+
 @media screen and (max-width: 550px) {
-    .footerupperconter1{
-         display: flex;
-         flex-direction: column;
-        justify-content: space-around; 
-        align-items: center;
-    }
-     .containerfooter{
-      display: flex !important;
-      }
-    .bodycontainer2{
-        display: flex;
-        flex-direction: column;
-        justify-content: center; 
-        align-items: center;    
-    }
+  .footerupperconter1 {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-around;
+    align-items: center;
+  }
+
+  .containerfooter {
+    display: flex !important;
+  }
+
+  .bodycontainer2 {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+  }
 }
 
 @media screen and (max-width: 400px) {
-    .footerupperconter1{
-        padding-left: 0;
-        padding-right: 0;
-    }
-      .covercontainerfooter{
-      padding: 0;}
-    
-}
-@media screen and (max-width: 425px) {
-    .containerfooter{
-      display: flex !important;
-      }
-      .bodycenteredcontent{
-      padding: 0 !important;
-      }
-    
+  .footerupperconter1 {
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .covercontainerfooter {
+    padding: 0;
+  }
+
 }
 
-.forgotpassbutton{
- cursor: pointer;
+@media screen and (max-width: 425px) {
+  .containerfooter {
+    display: flex !important;
+  }
+
+  .bodycenteredcontent {
+    padding: 0 !important;
+  }
+
+}
+
+.forgotpassbutton {
+  cursor: pointer;
 }
 
 .otp-modal-overlay {
@@ -402,6 +430,7 @@ input[type=number] {
     transform: translateY(-20px);
     opacity: 0;
   }
+
   to {
     transform: translateY(0);
     opacity: 1;
@@ -427,38 +456,44 @@ input[type=number] {
     width: 100%;
   }
 }
-.forgottpasswordinsignin{
-color: #007bff;
-text-decoration: none;
-font-weight: 500;
-text-align: end;
-cursor: pointer;
+
+.forgottpasswordinsignin {
+  color: #007bff;
+  text-decoration: none;
+  font-weight: 500;
+  text-align: end;
+  cursor: pointer;
 }
-.newpasswordclsdd{
- align-items: center;
- text-align: center;
- font-size: 30px;
- font-weight: 400;
- margin-bottom: 20px;
+
+.newpasswordclsdd {
+  align-items: center;
+  text-align: center;
+  font-size: 30px;
+  font-weight: 400;
+  margin-bottom: 20px;
 }
-.walletaddressed{
-overflow: hidden;
-text-overflow: ellipsis;
-width: 50%;
+
+.walletaddressed {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 50%;
 }
+
 @media screen and (max-width: 960px) {
-   .walletaddressed{
+  .walletaddressed {
     width: 70%;
-   }
+  }
 }
+
 @media screen and (max-width: 766px) {
-    .editbuttons{
-        display: block !important;
-        margin-bottom: 10px;
-        align-self: center;
-    }
-    .walletaddressed{
-      width: 100%;
-    }
-  
+  .editbuttons {
+    display: block !important;
+    margin-bottom: 10px;
+    align-self: center;
+  }
+
+  .walletaddressed {
+    width: 100%;
+  }
+
 }

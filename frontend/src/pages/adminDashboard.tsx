@@ -12,6 +12,9 @@ import { create } from 'ipfs-http-client';
 import { OrgContractABI } from '../../NewAbi.tsx'
 import { fetchContentFromIpfs, decryptFile } from '../Common/Utils';
 import ConfirmModal from '../Common/confirmPopup';
+import Sidebar from "./Sidebar";
+import { FiHome, FiUsers, FiBarChart2, FiMenu } from "react-icons/fi";
+
 
 
 interface DecryptedFile {
@@ -41,6 +44,7 @@ export default function UserDashboard() {
   const [pendingApprovalData, setPendingApprovalData] = useState<{ walletAddress: string; index: number; cid: string, approved: string } | null>(null);
   const [messageForConfirmPopup, setMessageForConfirmPopup] = useState('');
   const [forSpecialCall, setForSpecialCall] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const usersPerPage = 10;
   const navigate = useNavigate();
   const modalRef = useRef<HTMLDivElement>(null);
@@ -324,37 +328,40 @@ export default function UserDashboard() {
   };
 
   return (
-    <div className="min-h-screen overflow-x-hidden rounded-3xl mx-4 flex">
-      <aside className="min-w-[256px] shadow-2xl p-6 bg-gray-300 hidden md:block rounded-3xl text-black">
-        <h2 className="text-2xl text-center font-extrabold text-black mb-8">Admin</h2>
-        <ul className="space-y-4 font-medium text-black">
-          <nav className="flex flex-col gap-2">
-            <button
-              className={`flex items-center gap-3 px-4 py-3 rounded-xl text-base font-medium transition ${activeTab === "Dashboard"
-                ? "bg-gray-700 text-white"
-                : "text-black hover:bg-gray-700 hover:text-white"
-                }`}
-              onClick={() => setActiveTab("Dashboard")}
-            >
-              <FaUsers className="text-lg" /> Dashboard
-            </button>
-            <button
-              className={`flex items-center gap-3 px-4 py-3 rounded-xl text-base font-medium transition ${activeTab === "Reports"
-                ? "bg-gray-700 text-white"
-                : "text-black hover:bg-gray-700 hover:text-white"
-                }`}
-              onClick={() => setActiveTab("Reports")}
-            >
-              <FaChartPie className="text-lg" /> Reports
-            </button>
-          </nav>
-        </ul>
-      </aside>
+    <div className="min-h-screen overflow-x-hidden rounded-3xl bg-white mx-4 flex">
+      <button
+        className="lg:hidden relative z-[50] w-5 h-5 top-[25px] font-semibold left-4 bg-white p-2 rounded-lg shadow-lg"
+        onClick={() => setSidebarOpen(true)}
+      >
+        <FiMenu className="text-2xl" />
+      </button>
+
+      {/* Sidebar Overlay (Mobile) */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-40 z-40"
+          onClick={() => setSidebarOpen(false)}
+        ></div>
+      )}
+
+      {/* Sidebar */}
+      <Sidebar
+        title="Admin"
+        navItems={[
+          { label: "Dashboard", icon: <FiHome />, value: "Dashboard" },
+          //  { label: "Users", icon: <FiUsers />, value: "Users" },
+          { label: "Reports", icon: <FiBarChart2 />, value: "Reports" },
+        ]}
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        sidebarOpen={sidebarOpen}
+        setSidebarOpen={setSidebarOpen}
+      />
 
       <div className="flex-1 p-6 rounded-3xl">
         {activeTab === "Dashboard" && (
           <div>
-            <h2 className="text-4xl font-bold text-gray-800 mb-8">{adminLocalData ? `${adminLocalData?.name} Dashboard` : activeTab}</h2>
+            <h2 className="text-4xl ml-10 font-bold text-gray-800 mb-8">{adminLocalData ? `${adminLocalData?.name} Dashboard` : activeTab}</h2>
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-6 mb-10">
               <StatCard label="Users" value={users.length} color="blue" />
               <StatCard label="Documents Approved" value={totalApproved} color="green" />
@@ -366,16 +373,16 @@ export default function UserDashboard() {
               !currentUsers.length ? (<><p className="text-center text-gray-600">No users found</p></>)
                 :
                 <>
-                  <div className="overflow-x-auto rounded-xl bg-white shadow">
+                  <div className="overflow-x-scroll rounded-xl bg-white shadow">
                     <table className="w-full table-auto border-collapse text-sm">
                       <thead className="bg-gray-100 text-gray-800 text-lg font-semibold">
                         <tr>
-                          <th className="py-4 px-6 text-left">User Name</th>
-                          <th className="py-4 px-6 text-left">Email</th>
-                          <th className="py-4 px-6 text-center">Documents</th>
-                          <th className="py-4 px-6 text-left">Preview</th>
-                          <th className="py-4 px-6 text-center">Status</th>
-                          <th className="py-4 px-6 text-center">Action</th>
+                          <th className="py-2 px-2 text-left">User Name</th>
+                          <th className="py-2 px-2 text-left">Email</th>
+                          <th className="py-2 px-2 text-center">Documents</th>
+                          <th className="py-2 px-2 text-left">Preview</th>
+                          <th className="py-2 px-2 text-center">Status</th>
+                          <th className="py-2 px-2 text-center">Action</th>
                         </tr>
                       </thead>
                       <tbody className="text-gray-700">
@@ -501,7 +508,7 @@ export default function UserDashboard() {
 
         {activeTab === "Reports" && (
           <>
-            <h2 className="text-4xl font-bold text-gray-800 mb-8">{activeTab}</h2>
+            <h2 className="text-4xl ml-10 font-bold text-gray-800 mb-8">{activeTab}</h2>
             <div className="text-gray-700 text-xl text-center mt-20">Report Page Coming Soon...</div>
           </>
         )}

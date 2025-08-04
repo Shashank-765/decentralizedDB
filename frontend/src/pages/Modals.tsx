@@ -12,65 +12,65 @@ export const QrcodeModel = ({ walletAddress, onClose, logo }: { walletAddress: s
     const canvasSize = 300;
     const circleRadius = 60; // Increased circle radius
     const logoSize = circleRadius * 2;
-  
+
     useEffect(() => {
         if (!walletAddress || !canvasRef.current) return;
-    
+
         const canvas = canvasRef.current;
         canvas.width = canvasSize;
         canvas.height = canvasSize;
-    
+
         QRCode.toCanvas(
-          canvas,
-          walletAddress,
-          {
-            errorCorrectionLevel: "H",
-            width: canvasSize,
-            margin: 1,
-            color: {
-              dark: "#000000",
-              light: "#ffffff",
+            canvas,
+            walletAddress,
+            {
+                errorCorrectionLevel: "H",
+                width: canvasSize,
+                margin: 1,
+                color: {
+                    dark: "#000000",
+                    light: "#ffffff",
+                },
             },
-          },
-          (err) => {
-            if (err) console.error(err);
-            else {
-              const ctx = canvas.getContext("2d");
-              if (ctx) {
-                const centerX = canvasSize / 2;
-                const centerY = canvasSize / 2;
-    
-                ctx.fillStyle = "#ffffff";
-                ctx.beginPath();
-                ctx.arc(centerX, centerY, circleRadius + 6, 0, 2 * Math.PI);
-                ctx.fill();
-    
-                // Draw logo inside a circular clip
-                const logoImg = new Image();
-                logoImg.src = logo; 
-                logoImg.onerror = () => {logoImg.src = logo1}
-                logoImg.crossOrigin = 'Anonymous';
-                logoImg.referrerPolicy = 'no-referrer';
-                logoImg.loading = 'lazy';
-                logoImg.onload = () => {
-                  ctx.save();
-                  ctx.beginPath();
-                  ctx.arc(centerX, centerY, circleRadius, 0, 2 * Math.PI);
-                  ctx.clip();
-                  ctx.drawImage(
-                    logoImg,
-                    centerX - circleRadius,
-                    centerY - circleRadius,
-                    logoSize,
-                    logoSize
-                  );
-                  ctx.restore();
-                };
-              }
+            (err) => {
+                if (err) console.error(err);
+                else {
+                    const ctx = canvas.getContext("2d");
+                    if (ctx) {
+                        const centerX = canvasSize / 2;
+                        const centerY = canvasSize / 2;
+
+                        ctx.fillStyle = "#ffffff";
+                        ctx.beginPath();
+                        ctx.arc(centerX, centerY, circleRadius + 6, 0, 2 * Math.PI);
+                        ctx.fill();
+
+                        // Draw logo inside a circular clip
+                        const logoImg = new Image();
+                        logoImg.src = logo;
+                        logoImg.onerror = () => { logoImg.src = logo1 }
+                        logoImg.crossOrigin = 'Anonymous';
+                        logoImg.referrerPolicy = 'no-referrer';
+                        logoImg.loading = 'lazy';
+                        logoImg.onload = () => {
+                            ctx.save();
+                            ctx.beginPath();
+                            ctx.arc(centerX, centerY, circleRadius, 0, 2 * Math.PI);
+                            ctx.clip();
+                            ctx.drawImage(
+                                logoImg,
+                                centerX - circleRadius,
+                                centerY - circleRadius,
+                                logoSize,
+                                logoSize
+                            );
+                            ctx.restore();
+                        };
+                    }
+                }
             }
-          }
         );
-      }, [walletAddress]);
+    }, [walletAddress]);
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -103,7 +103,7 @@ export const QrcodeModel = ({ walletAddress, onClose, logo }: { walletAddress: s
                 </div>
 
                 <div className="flex justify-center mb-4">
-                <canvas ref={canvasRef} />
+                    <canvas ref={canvasRef} />
                 </div>
 
                 <p className="text-gray-700 flex justify-center mt-6 mb-2 text-sm break-all">

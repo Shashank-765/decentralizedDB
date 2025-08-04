@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState } from "react";
-import { FiHome, FiUsers } from "react-icons/fi";
+import { FiHome, FiUsers, FiBarChart2, FiMenu, FiX } from "react-icons/fi";
 import { FaCloudUploadAlt } from "react-icons/fa";
 import { create } from "ipfs-http-client";
 import CircularLoader from "../Common/CircularLoader.tsx";
@@ -12,6 +12,8 @@ import { useLocation } from "react-router-dom";
 // import { useWeb3Auth } from "@web3auth/modal/react";
 import axios from 'axios';
 import { decryptFile, fetchContentFromIpfs, encryptFile, encryptJsonData, ensureMinBalance } from "../Common/Utils";
+import Sidebar from './Sidebar'
+
 interface DecryptedFile {
     url: string;
     name: string;
@@ -41,6 +43,7 @@ const UserDashboard: React.FC = () => {
     const [isCircularLoading, setIsCirculrLoading] = useState(false);
     const [signer, setSigner] = useState<ethers.Signer | null>(null);
     const [orgContractAddress, setOrgContractAddress] = useState<any>([]);
+    const [sidebarOpen, setSidebarOpen] = useState(false);
     interface Organization {
         orgContractAddress: string;
         [key: string]: any;
@@ -486,53 +489,37 @@ const UserDashboard: React.FC = () => {
 
     return (
         <div className="min-h-screen overflow-x-hidden rounded-3xl bg-white mx-4 flex ">
-            <aside className="w-[256px] shadow-2xl p-6 bg-gray-300 hidden mt-10 mb-5 md:block rounded-2xl text-black">
-                <h2 className="text-2xl text-center font-extrabold text-black mb-8">User</h2>
-                <ul className="space-y-4 font-medium text-black">
-                    <nav className="flex flex-col gap-2">
-                        <button
-                            className={`flex items-center gap-3 px-4 py-3 rounded-xl text-base font-medium transition
-              ${activeTab === "Dashboard"
-                                    ? "bg-gray-700 text-white"
-                                    : "text-black hover:bg-gray-700 hover:text-white"
-                                }`}
-                            onClick={() => setActiveTab("Dashboard")}
-                        >
-                            <FiHome className="text-lg transition-colors duration-200" />
-                            Dashboard
-                        </button>
+            <button
+                className="lg:hidden relative z-[50] w-5 h-5 top-[20px] font-semibold left-4 bg-white p-2 rounded-lg shadow-lg"
+                onClick={() => setSidebarOpen(true)}
+            >
+                <FiMenu className="text-2xl" />
+            </button>
 
-                        <button
-                            className={`flex items-center gap-3 px-4 py-3 rounded-xl text-base font-medium transition
-              ${activeTab === "Documents"
-                                    ? "bg-gray-700 text-white"
-                                    : "text-black hover:bg-gray-700 hover:text-white"
-                                }`}
-                            onClick={() => setActiveTab("Documents")}
-                        >
-                            <FiUsers className="text-lg transition-colors duration-200" />
-                            Documents
-                        </button>
-
-                        {/* <button
-                            className={`flex items-center gap-3 px-4 py-3 rounded-xl text-base font-medium transition
-              ${activeTab === "reports"
-                                    ? "bg-gray-700 text-white"
-                                    : "text-black hover:bg-gray-700 hover:text-white"
-                                }`}
-                            onClick={() => setActiveTab("reports")}
-                        >
-                            <FiBarChart2 className="text-lg transition-colors duration-200" />
-                            Reports
-                        </button> */}
-                    </nav>
-                </ul>
-            </aside>
+            {/* Sidebar Overlay (Mobile) */}
+            {sidebarOpen && (
+                <div
+                    className="fixed inset-0 bg-black bg-opacity-40 z-40"
+                    onClick={() => setSidebarOpen(false)}
+                ></div>
+            )}
+            <Sidebar
+                title="User"
+                navItems={[
+                    { label: "Dashboard", icon: <FiHome />, value: "Dashboard" },
+                    { label: "Documents", icon: <FiUsers />, value: "Documents" },
+                    //   { label: "Reports", icon: <FiBarChart2 />, value: "Reports" },
+                ]}
+                activeTab={activeTab}
+                setActiveTab={setActiveTab}
+                sidebarOpen={sidebarOpen}
+                setSidebarOpen={setSidebarOpen}
+            />
 
             {/* Main Content */}
             <main className="flex-1 p-5 md:p-5 overflow-x-hidden">
                 <div className="flex items-center justify-between mb-8">
-                    <h1 className="text-3xl font-bold text-gray-800"> {adminUser ? `${adminUser?.name} Dashboard` : activeTab} </h1>
+                    <h1 className="text-3xl font-bold ml-10 text-gray-800"> {adminUser ? `${adminUser?.name} Dashboard` : activeTab} </h1>
                     {
                         activeTab == 'Documents' && (
                             !adminUser && (

@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import config from '../../config.json';
-import { FiHome, FiUsers, FiBarChart2 } from "react-icons/fi";
+import { FiHome, FiUsers, FiBarChart2, FiMenu, FiX } from "react-icons/fi";
 import { FaEye } from "react-icons/fa";
 import axios from "axios";
 import ToastMessage from "./toastmessage";
@@ -14,6 +14,7 @@ const provider = new ethers.providers.JsonRpcProvider(config.URL_RPC);
 const adminWallet = new ethers.Wallet(config.adminPrivateKey, provider);
 const SuperAdminContract = new ethers.Contract(config.contractAddress, SuperAdminABI, adminWallet);
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
+import Sidebar from "./Sidebar";
 
 const dummyDocuments: any = [
   { id: 1, name: "User A - Doc 1", status: "approved", adminName: "Admin One" },
@@ -49,6 +50,7 @@ const SuperAdminDashboard: React.FC = () => {
   const [endDate, setEndDate] = useState(today.toISOString().split('T')[0]);
   const localUserData = JSON.parse(localStorage.getItem("user") || "{}");
   const [allBalances, setAllBalances] = useState<any>([]);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   // const totalUsers = allUsers.length;
   const totalAdmins = allAdmins.length;
   const approvedDocs = dummyDocuments.filter((doc: any) => doc.status === "approved");
@@ -120,7 +122,6 @@ const SuperAdminDashboard: React.FC = () => {
       );
       const receipt = await contractResponse.wait();
       setIsCreateModelOpen(false);
-      return;
       const getAllOrgs = await SuperAdminContract.getAllOrgs();
       if (receipt.status === 1) {
         try {
@@ -265,66 +266,39 @@ const SuperAdminDashboard: React.FC = () => {
 
   return (
     <div className="min-h-screen overflow-x-hidden rounded-3xl bg-white mx-4 flex">
+      <button
+        className="lg:hidden relative z-[50] w-5 h-5 top-[20px] font-semibold left-4 bg-white p-2 rounded-lg shadow-lg"
+        onClick={() => setSidebarOpen(true)}
+      >
+        <FiMenu className="text-2xl" />
+      </button>
+
+      {/* Sidebar Overlay (Mobile) */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-40 z-40"
+          onClick={() => setSidebarOpen(false)}
+        ></div>
+      )}
+
       {/* Sidebar */}
-      <aside className="w-[256px] shadow-2xl p-6 bg-gray-300 hidden mt-10 mb-5 md:block rounded-2xl text-black">
-        <h2 className="text-2xl text-center font-extrabold text-black mb-8">Super Admin</h2>
-        <ul className="space-y-4 font-medium text-black">
-          <nav className="flex flex-col gap-2">
-            <button
-              className={`flex items-center gap-3 px-4 py-3 rounded-xl text-base font-medium transition
-              ${activeTab === "Dashboard"
-                  ? "bg-gray-700 text-white"
-                  : "text-black hover:bg-gray-700 hover:text-white"
-                }`}
-              onClick={() => setActiveTab("Dashboard")}
-            >
-              <FiHome className="text-lg transition-colors duration-200" />
-              Dashboard
-            </button>
-
-            <button
-              className={`flex items-center gap-3 px-4 py-3 rounded-xl text-base font-medium transition
-              ${activeTab === "Admins"
-                  ? "bg-gray-700 text-white"
-                  : "text-black hover:bg-gray-700 hover:text-white"
-                }`}
-              onClick={() => setActiveTab("Admins")}
-            >
-              <FiUsers className="text-lg transition-colors duration-200" />
-              Admin
-            </button>
-
-            {/* <button
-              className={`flex items-center gap-3 px-4 py-3 rounded-xl text-base font-medium transition
-              ${activeTab === "Users"
-                  ? "bg-gray-700 text-white"
-                  : "text-black hover:bg-gray-700 hover:text-white"
-                }`}
-              onClick={() => setActiveTab("Users")}
-            >
-              <FaUserShield className="text-lg transition-colors duration-200" />
-              Users
-            </button> */}
-
-            <button
-              className={`flex items-center gap-3 px-4 py-3 rounded-xl text-base font-medium transition
-              ${activeTab === "Reports"
-                  ? "bg-gray-700 text-white"
-                  : "text-black hover:bg-gray-700 hover:text-white"
-                }`}
-              onClick={() => setActiveTab("Reports")}
-            >
-              <FiBarChart2 className="text-lg transition-colors duration-200" />
-              Reports
-            </button>
-          </nav>
-        </ul>
-      </aside>
+      <Sidebar
+        title="Super Admin"
+        navItems={[
+          { label: "Dashboard", icon: <FiHome />, value: "Dashboard" },
+          { label: "Admins", icon: <FiUsers />, value: "Admins" },
+          { label: "Reports", icon: <FiBarChart2 />, value: "Reports" },
+        ]}
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        sidebarOpen={sidebarOpen}
+        setSidebarOpen={setSidebarOpen}
+      />
 
       {/* Main Content */}
       <main className="flex-1 p-5 md:p-5 overflow-x-hidden">
         <div className="flex items-center justify-between mb-8">
-          <h1 className="text-3xl font-bold text-gray-800">{activeTab}</h1>
+          <h1 className="text-3xl font-bold ml-10 text-gray-800">{activeTab}</h1>
           {
             activeTab === "Admins" && (
               <button onClick={() => setIsCreateModelOpen(true)} className="bg-gray-700 text-white px-4 py-2 flex items-center gap-2 rounded-full text-sm font-medium transition"> + Create Admin</button>
