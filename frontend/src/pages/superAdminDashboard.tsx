@@ -2,17 +2,18 @@ import React, { useRef, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import config from '../../config.json';
 import { FiHome, FiUsers, FiBarChart2 } from "react-icons/fi";
-import { FaUserShield, FaEye } from "react-icons/fa";
+import { FaEye } from "react-icons/fa";
 import axios from "axios";
 import ToastMessage from "./toastmessage";
 import blockIcon from '../assets/prohibition.png';
 import unblock from '../assets/unlock.png';
 import { SuperAdminABI } from '../../NewAbi.tsx'
 import { ethers } from "ethers";
+import { DateFilterPopup } from "../Common/Utils";
 const provider = new ethers.providers.JsonRpcProvider(config.URL_RPC);
 const adminWallet = new ethers.Wallet(config.adminPrivateKey, provider);
 const SuperAdminContract = new ethers.Contract(config.contractAddress, SuperAdminABI, adminWallet);
-import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, Tooltip, Legend, CartesianGrid, ResponsiveContainer } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 
 const dummyDocuments: any = [
   { id: 1, name: "User A - Doc 1", status: "approved", adminName: "Admin One" },
@@ -21,77 +22,12 @@ const dummyDocuments: any = [
   { id: 4, name: "User D - Doc 4", status: "rejected", adminName: "Admin One" },
 ];
 
-
-
-const today = new Date();
-const yesterday = new Date(today);
-yesterday.setDate(yesterday.getDate() - 1);
-
-const DateFilterPopup = ({ onApply }: { onApply: (start: string, end: string) => void }) => {
-  const [showPopup, setShowPopup] = useState(false);
-  const [startDate, setStartDate] = useState(yesterday.toISOString().split('T')[0]);
-  const [endDate, setEndDate] = useState(today.toISOString().split('T')[0]);
-
-  const handleApply = () => {
-    onApply(startDate, endDate);
-    setShowPopup(false);
-  };
-
-  return (
-    <div>
-      {/* Trigger Button */}
-      <button
-        onClick={() => setShowPopup(true)}
-        className="bg-blue-600 text-white px-4 py-2 rounded"
-      >
-        Select Date Range
-      </button>
-
-      {/* Modal Popup */}
-      {showPopup && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-80 shadow-lg">
-            <h2 className="text-lg font-semibold mb-4 text-center">Select Date Range</h2>
-
-            {/* Start Date */}
-            <label className="block mb-2 font-medium">Start Date</label>
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="w-full border p-2 mb-4 rounded"
-            />
-
-            {/* End Date */}
-            <label className="block mb-2 font-medium">End Date</label>
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="w-full border p-2 mb-4 rounded"
-            />
-
-            {/* Actions */}
-            <div className="flex justify-end gap-2">
-              <button
-                onClick={() => setShowPopup(false)}
-                className="px-4 py-2 bg-gray-300 rounded"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleApply}
-                className="px-4 py-2 bg-blue-600 text-white rounded"
-              >
-                Apply Filter
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
+interface GraphDataItem {
+  count: number;
+  // Add other properties that might be in your graph data objects
+  date?: string;
+  name?: string;
+}
 
 const SuperAdminDashboard: React.FC = () => {
   const [modalType, setModalType] = useState<"approved" | "rejected" | null>(null);
@@ -102,10 +38,14 @@ const SuperAdminDashboard: React.FC = () => {
   const [dataToSend, setdataToSend] = useState({ name: "", email: "", organization: "", orgContractAddress: "" })
   // const [allUsers, setAllUsers] = useState<any>([]);
   const [allAdmins, setAllAdmins] = useState<any>([]);
-  const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff8042'];
-  const [graphData, setGraphData] = useState([]);
-  const [filterType, setFilterType] = useState('day'); // day, week, month, year
-  const [startDate, setStartDate] = useState(yesterday.toISOString().split('T')[0]);
+  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
+  const [adminGraphData, setAdminGraphData] = useState<GraphDataItem[]>([]);
+  const [userGraphData, setUserGraphData] = useState<GraphDataItem[]>([]);
+  const [filterType, setFilterType] = useState('year'); // day, week, month, year
+  const today = new Date();
+  const lastYear = new Date();
+  lastYear.setFullYear(today.getFullYear() - 1);
+  const [startDate, setStartDate] = useState(lastYear.toISOString().split('T')[0]);
   const [endDate, setEndDate] = useState(today.toISOString().split('T')[0]);
   const localUserData = JSON.parse(localStorage.getItem("user") || "{}");
   const [allBalances, setAllBalances] = useState<any>([]);
@@ -180,8 +120,8 @@ const SuperAdminDashboard: React.FC = () => {
       );
       const receipt = await contractResponse.wait();
       setIsCreateModelOpen(false);
+      return;
       const getAllOrgs = await SuperAdminContract.getAllOrgs();
-
       if (receipt.status === 1) {
         try {
           const response = await axios.post(`${config.URL_BACKEND}api/auth/createAdmin`, {
@@ -215,21 +155,6 @@ const SuperAdminDashboard: React.FC = () => {
       return;
     }
   };
-
-  // const fetchAllUser = async () => {
-
-  //   try {
-  //     for (let i = 0; i < user.length; i++) {
-  //       const response = await axios.get(`${config.URL_BACKEND}api/auth/userListByWalletAddress?walletAddress=${user[i]}`);
-  //       if (response.status === 200) {
-  //         setAllUsers((prev: any) => [...prev, response.data.user]);
-  //       }
-  //     }
-  //   } catch (error) {
-  //     console.log(error);
-  //     return;
-  //   }
-  // }
 
   const fetchAllAdmins = async () => {
     const getAllOrgs = await SuperAdminContract.getAllOrgs();
@@ -290,19 +215,20 @@ const SuperAdminDashboard: React.FC = () => {
         params: { filterType, startDate, endDate },
         headers: { _token: localUserData?.token }
       });
-      setGraphData(res.data.data);
-      setStartDate('');
-      setEndDate('');
+      setAdminGraphData(res.data.data.admins);
+      setUserGraphData(res.data.data.users);
     } catch (error) {
       console.error('Error fetching report data:', error);
     }
   };
 
   useEffect(() => {
-    fetchGraphData();
-  }, [filterType]);
+    if (startDate && endDate) {
+      fetchGraphData();
+    }
+  }, [startDate, endDate]);
 
-  const selectDateHandler = (type: string = 'week') => {
+  const selectDateHandler = (type: string = 'year') => {
     setFilterType(type);
     const now = new Date();
     let start: Date;
@@ -323,8 +249,6 @@ const SuperAdminDashboard: React.FC = () => {
         start = new Date(now);
         start.setFullYear(start.getFullYear() - 1); // last year
         break;
-      case 'custom':
-        return; // do nothing (user chooses manually)
       default:
         return;
     }
@@ -333,6 +257,11 @@ const SuperAdminDashboard: React.FC = () => {
     setEndDate(end.toISOString().split('T')[0]);
 
   };
+
+  const pieData = [
+    { label: 'Admins', count: adminGraphData?.reduce((sum, item) => sum + item.count, 0) },
+    { label: 'Users', count: userGraphData?.reduce((sum, item) => sum + item.count, 0) },
+  ];
 
   return (
     <div className="min-h-screen overflow-x-hidden rounded-3xl bg-white mx-4 flex">
@@ -430,7 +359,7 @@ const SuperAdminDashboard: React.FC = () => {
                       </tr>
                     </thead>
                     <tbody className="text-gray-800">
-                      {allAdmins.length > 0 && allAdmins.slice(0,5)?.map((admin: any, index: any) => (
+                      {allAdmins.length > 0 && allAdmins.slice(0, 5)?.map((admin: any, index: any) => (
                         <tr key={index} className="border-t hover:bg-gray-50 transition">
                           <td className="py-4 px-6 text-base">{admin?.name}</td>
                           <td className="py-4 px-6 text-base">{admin?.email}</td>
@@ -580,7 +509,7 @@ const SuperAdminDashboard: React.FC = () => {
               <select
                 value={filterType}
                 onChange={(e) => selectDateHandler(e.target.value)}
-                className="border p-2 rounded"
+                className="border pr-4 pl-4 p-2 bg-gray-100 hover:bg-gray-200 mb-2 rounded"
               >
                 <option value="day">Day</option>
                 <option value="week">Week</option>
@@ -592,88 +521,85 @@ const SuperAdminDashboard: React.FC = () => {
                 onApply={(start, end) => {
                   setStartDate(start);
                   setEndDate(end);
-                  fetchGraphData();
                 }}
               />
             </div>
-            <div className="flex justify-around min-w-0 max-h-80 mt-5 rounded-2xl">
-              <div className="w-[45%] h-80 border border-gray-500 rounded-2xl mt-4 mb-4">
-                <h2 className="text-xl font-semibold ml-5 mb-2">Line Chart - Admins</h2>
-                <ResponsiveContainer>
-                  <LineChart data={graphData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="label" />
-                    <YAxis />
-                    <Tooltip />
-                    <Legend />
-                    <Line type="monotone" dataKey="count" stroke="#8884d8" />
-                  </LineChart>
-                </ResponsiveContainer>
+            <div className="w-full px-4 sm:px-6 lg:px-12 py-8">
+              <div className="flex flex-col xl:flex-row justify-center gap-8 w-full">
+                {/* Admin Line Chart */}
+                <div className="w-full xl:w-[45%] max-w-[700px] mx-auto bg-gray-300 shadow-md rounded-2xl p-6">
+                  <h2 className="text-2xl font-semibold text-center text-gray-800">Admins</h2>
+                  {/* <p className="text-sm text-gray-500 mb-4">IN THOUSANDS (USD)</p> */}
+                  <div className="h-[300px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={adminGraphData}>
+                        <CartesianGrid stroke="#eee" strokeDasharray="3 3" vertical={false} />
+                        <XAxis dataKey="label" tick={{ fill: '#444' }} />
+                        <YAxis tick={{ fill: '#444' }} />
+                        <Tooltip />
+                        <Line
+                          type="monotone"
+                          dataKey="count"
+                          stroke="#0f172a"
+                          strokeWidth={3}
+                          dot={{ r: 5, stroke: '#0f172a', strokeWidth: 2, fill: 'white' }}
+                          activeDot={{ r: 7 }}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+                {/* User Line Chart */}
+                <div className="w-full xl:w-[45%] max-w-[700px] mx-auto bg-gray-300 shadow-md rounded-2xl p-6">
+                  <h2 className="text-2xl font-semibold text-center text-gray-800">Users</h2>
+                  {/* <p className="text-sm text-gray-500 mb-4">IN THOUSANDS (USD)</p> */}
+                  <div className="h-[300px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={userGraphData}>
+                        <CartesianGrid stroke="#eee" strokeDasharray="3 3" vertical={false} />
+                        <XAxis dataKey="label" tick={{ fill: '#444' }} />
+                        <YAxis tick={{ fill: '#444' }} />
+                        <Tooltip />
+                        <Line
+                          type="monotone"
+                          dataKey="count"
+                          stroke="#0f172a"
+                          strokeWidth={3}
+                          dot={{ r: 5, stroke: '#0f172a', strokeWidth: 2, fill: 'white' }}
+                          activeDot={{ r: 7 }}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
               </div>
-              <div className="w-[45%] h-80 border border-gray-500 rounded-2xl mt-4 mb-4">
-                <h2 className="text-xl font-semibold ml-5 mb-2">Bar Chart - Admins</h2>
-                <ResponsiveContainer>
-                  <BarChart data={graphData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="label" />
-                    <YAxis />
-                    <Tooltip />
-                    <Legend />
-                    <Bar dataKey="count" fill="#82ca9d" />
-                  </BarChart>
-                </ResponsiveContainer>
+              {/* Pie Chart */}
+              <div className="mt-10 w-full xl:w-[50%] max-w-[700px] mx-auto bg-gray-300 shadow-md rounded-2xl p-6">
+                <h2 className="text-2xl font-semibold text-center text-gray-800">Graph</h2>
+                {/* <p className="text-sm text-gray-500 mb-4">Distribution of Admins & Users</p> */}
+                <div className="h-[360px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={pieData}
+                        dataKey="count"
+                        nameKey="label"
+                        cx="50%"
+                        cy="50%"
+                        outerRadius="80%"
+                        label
+                      >
+                        {pieData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                      <Legend />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
               </div>
             </div>
-
-
-            {/* Pie Chart */}
-            <div className="flex justify-around min-w-0 max-h-96 mt-20 rounded-2xl">
-              <div className="w-[45%] h-80 border border-gray-500 rounded-2xl mt-4 mb-4">
-                <h2 className="text-xl font-semibold ml-5 mb-2">Pie Chart - Admins</h2>
-                <ResponsiveContainer>
-                  <PieChart>
-                    <Pie
-                      data={graphData}
-                      dataKey="count"
-                      nameKey="label"
-                      cx="50%"
-                      cy="50%"
-                      outerRadius={120}
-                      label
-                    >
-                      {graphData?.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                    <Legend />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="w-[45%] h-80 border border-gray-500 rounded-2xl mt-4 mb-4">
-                <h2 className="text-xl font-semibold ml-5 mb-2">Pie Chart - Users</h2>
-                <ResponsiveContainer>
-                  <PieChart>
-                    <Pie
-                      data={graphData}
-                      dataKey="count"
-                      nameKey="label"
-                      cx="50%"
-                      cy="50%"
-                      outerRadius={120}
-                      label
-                    >
-                      {graphData?.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                    <Legend />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-
           </>
         }
 

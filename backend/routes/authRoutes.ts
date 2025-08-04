@@ -2,7 +2,7 @@
 import express from "express";
 import {
   createAdmin, login, userList, updateUser, getuserdata,
-  blockUser, unblockUser, addDocument, getAllUsers, getAllAdmins, approveDocument, rejectDocument,getGraphData,fakeDataToStore,userListByWalletAddress,getOrganizationContractAddress,getAllOrganization,getAllAdminsByWalletAddress
+  blockUser, unblockUser, addDocument, getAllUsers, getAllAdmins, approveDocument, rejectDocument, getGraphData, fakeDataToStore, userListByWalletAddress, getOrganizationContractAddress, getAllOrganization, getAllAdminsByWalletAddress
 } from "../controllers/authController";
 import { authorize } from "../Authorization/Auth";
 
@@ -20,11 +20,11 @@ router.post("/unblockUser", authorize, unblockUser);
 router.post("/addDocument", authorize, addDocument);
 router.post("/approveDocument", authorize, approveDocument);
 router.post("/rejectDocument", authorize, rejectDocument)
-router.get('/getGraphData',authorize,getGraphData)
-router.post('/fakeDataToStore',fakeDataToStore)
-router.get('/userListByWalletAddress',userListByWalletAddress)
-router.get('/getAllAdminsByWalletAddress',getAllAdminsByWalletAddress)
-router.get('/getOrganizationContractAddress',authorize,getOrganizationContractAddress)
-router.get('/getAllOrganization',getAllOrganization)
+router.get('/getGraphData', authorize, getGraphData)
+router.post('/fakeDataToStore', fakeDataToStore)
+router.get('/userListByWalletAddress', userListByWalletAddress)
+router.get('/getAllAdminsByWalletAddress', getAllAdminsByWalletAddress)
+router.get('/getOrganizationContractAddress', authorize, getOrganizationContractAddress)
+router.get('/getAllOrganization', getAllOrganization)
 
 export default router;

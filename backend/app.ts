@@ -4,7 +4,7 @@ import connectDB from './config/mongo.config'
 import authRoutes from "./routes/authRoutes";
 import { errorHandler } from "./middlewares/errorHandler";
 import session from "express-session";
-
+import { faker } from '@faker-js/faker';
 const app = express()
 connectDB()
 app.use(cors({
@@ -18,7 +18,7 @@ app.use(session({
   resave: false,
   saveUninitialized: false,
   cookie: {
-    secure: false,      
+    secure: false,
     httpOnly: true,
     maxAge: 24 * 60 * 60 * 1000,
   },
@@ -31,7 +31,3 @@ app.use(errorHandler);
 
 export default app
 
-let arr =[1,2,-5,6,-9,0,-1,6];
- for(let i=0;i<arr.length;i++){
-    
- }

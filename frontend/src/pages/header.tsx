@@ -308,167 +308,62 @@ function Header() {
           </div>
 
           <ul className={`hidden lg:flex space-x-6`}>
-            <li><Link to="/home" className="text-gray-700 hover:text-gray-800 text-lg w-32 h-11 flex items-center justify-center rounded-full bg-white shadow-md hover:shadow-lg transition">Home</Link></li>
+            <li><Link to="/home" className="text-gray-700 font-semibold hover:text-gray-800 text-lg w-32 h-11 flex items-center justify-center rounded-full bg-white shadow-md hover:shadow-lg transition">Home</Link></li>
 
             {user ? (
-              user.userType === "User" ? (
-                <>
-                  <li
-                    className="relative"
-                    onClick={() => setPopupOpen()}
+              <>
+                <li
+                  className="relative"
+                  onClick={() => setPopupOpen()}
+                >
+                  <Link
+                    to={`${user?.userType === "SuperAdmin" ? "/superadmin" : user?.userType === "Admin" ? "/adminDashboard" : user?.userType === "User" ? "/userDashboard" : "/not-found"}`}
+                    className="text-gray-700 font-semibold hover:text-gray-800 text-lg w-32 h-11 flex items-center justify-center rounded-full bg-white shadow-md hover:shadow-lg transition"
                   >
-                    <Link
-                      to="/userDashboard"
-                      className="text-gray-700 hover:text-gray-800 text-lg w-32 h-11 flex items-center justify-center rounded-full bg-white shadow-md hover:shadow-lg transition"
+                    Dashboard
+                  </Link>
+                </li>
+                <li className="relative">
+                  <div
+                    className="text-gray-700 font-semibold hover:text-gray-800 text-lg pl-4 pr-4 h-11 flex items-center justify-center rounded-full bg-white shadow-md hover:shadow-lg transition cursor-pointer whitespace-nowrap min-w-0"
+                    onClick={() => setBalanceOpen(!balanceOpen)}
+                  >
+                    <img src={walletImage} className="w-5 h-5 flex-shrink-0" alt="wallet" />
+                    <p className="ml-2 max-w-[110px]">{Number(walletBalance).toFixed(2)} ETH</p>
+                    <svg
+                      className="w-4 h-4 ml-1 text-gray-600 flex-shrink-0"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      viewBox="0 0 24 24"
                     >
-                      Dashboard
-                    </Link>
-                  </li>
-                  <li className="relative">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </div>
+
+                  {balanceOpen && (
                     <div
-                      className="text-gray-700 hover:text-gray-800 text-lg pl-6 pr-6 h-11 flex items-center justify-center rounded-full bg-white shadow-md hover:shadow-lg transition cursor-pointer"
-                      onClick={() => setBalanceOpen(!balanceOpen)}
+                      ref={popupRef4}
+                      className="absolute top-full left-0 mt-1 ml-2 w-36 bg-white rounded-lg shadow-lg z-50 overflow-hidden"
                     >
-                      <img src={walletImage} className="w-5 h-5" alt="" />
-                      <p className="ml-2">{Number(walletBalance).toFixed(2)} ETH</p>
-                      <svg
-                        className="w-4 h-4 ml-1 text-gray-600"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        viewBox="0 0 24 24"
+                      <button
+                        onClick={withdrawPopupHandler}
+                        className="block w-full text-center px-4 font-semibold py-2 text-gray-700 hover:bg-gray-100"
                       >
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                      </svg>
+                        Transfer
+                      </button>
+                      <button
+                        onClick={QrPopupHandler}
+                        className="block w-full text-center px-4 font-semibold py-2 text-gray-600 hover:bg-gray-100"
+                      >
+                        Recieve
+                      </button>
                     </div>
-                    {balanceOpen && (
-                      <div
-                        ref={popupRef4}
-                        className="absolute top-full left-0 mt-1 ml-2 w-36 bg-white rounded-lg shadow-lg z-50 overflow-hidden"
-                      >
-                        <button
-                          onClick={withdrawPopupHandler}
-                          className="block w-full text-center px-4 py-2 text-gray-700 hover:bg-gray-100"
-                        >
-                          Transfer
-                        </button>
-                        <button
-                          onClick={QrPopupHandler}
-                          className="block w-full text-center px-4 py-2 text-gray-600 hover:bg-gray-100"
-                        >
-                          Recieve
-                        </button>
-                      </div>
-                    )}
-                  </li>
-                </>
-              ) :
-
-                user.userType === "Admin" ? (
-                  <>
-                    <li>
-                      <Link
-                        to="/adminDashboard"
-                        className="text-gray-700 hover:text-gray-800 text-lg w-32 h-11 flex items-center justify-center rounded-full bg-white shadow-md hover:shadow-lg transition"
-                      >
-                        Dashboard
-                      </Link>
-                    </li>
-                    <li className="relative">
-                      <div
-                        className="text-gray-700 hover:text-gray-800 text-lg pl-6 pr-6 h-11 flex items-center justify-center rounded-full bg-white shadow-md hover:shadow-lg transition cursor-pointer"
-                        onClick={() => setBalanceOpen(!balanceOpen)}
-                      >
-                        <img src={walletImage} className="w-5 h-5" alt="" />
-                        <p className="ml-2"> {Number(walletBalance).toFixed(2)} ETH
-                        </p>
-                        <svg
-                          className="w-4 h-4 ml-1 text-gray-600"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          viewBox="0 0 24 24"
-                        >
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                        </svg>
-                      </div>
-                      {balanceOpen && (
-                        <div
-                          ref={popupRef4}
-                          className="absolute top-full left-0 mt-1 ml-2 w-36 bg-white rounded-lg shadow-lg z-50 overflow-hidden"
-                        >
-                          <button
-                            onClick={withdrawPopupHandler}
-                            className="block w-full text-center px-4 py-2 text-gray-700 hover:bg-gray-100"
-                          >
-                            Transfer
-                          </button>
-                          <button
-                            onClick={QrPopupHandler}
-                            className="block w-full text-center px-4 py-2 text-gray-600 hover:bg-gray-100"
-                          >
-                            Recieve
-                          </button>
-                        </div>
-                      )}
-                    </li>
-                  </>
-
-                ) :
-                  (
-                    <>
-                      <li>
-                        <Link
-                          to="/superadmin"
-                          className="text-gray-700 hover:text-gray-800 text-lg w-32 h-11 flex items-center justify-center rounded-full bg-white shadow-md hover:shadow-lg transition"
-                        >
-                          Dashboard
-                        </Link>
-                      </li>
-                      <li className="relative">
-                        <div
-                          className="text-gray-700 hover:text-gray-800 text-lg pl-6 pr-6 h-11 flex items-center justify-center rounded-full bg-white shadow-md hover:shadow-lg transition cursor-pointer"
-                          onClick={() => setBalanceOpen(!balanceOpen)}
-                        >
-                          <img src={walletImage} className="w-5 h-5" alt="" />
-                          <p className="ml-2">{Number(walletBalance).toFixed(2)} ETH</p>
-                          <svg
-                            className="w-4 h-4 ml-1 text-gray-600"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            viewBox="0 0 24 24"
-                          >
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                          </svg>
-                        </div>
-
-                        {balanceOpen && (
-                          <div
-                            ref={popupRef4}
-                            className="absolute top-full left-0 mt-1 ml-2 w-36 bg-white rounded-lg shadow-lg z-50 overflow-hidden"
-                          >
-                            <button
-                              onClick={withdrawPopupHandler}
-                              className="block w-full text-center px-4 py-2 text-gray-700 hover:bg-gray-100"
-                            >
-                              Transfer
-                            </button>
-                            <button
-                              onClick={QrPopupHandler}
-                              className="block w-full text-center px-4 py-2 text-gray-600 hover:bg-gray-100"
-                            >
-                              Recieve
-                            </button>
-                          </div>
-                        )}
-                      </li>
-
-                    </>
-                  )
-            ) : null}
-
-
+                  )}
+                </li>
+              </>
+            ) : null
+            }
             <li>
               {(user || !isConnected) &&
                 (
@@ -477,14 +372,14 @@ function Header() {
                     {!isConnected && !user ? (
                       <button
                         onClick={() => connect()}
-                        className="text-gray-700 hover:text-gray-800 text-lg w-32 h-11 flex items-center justify-center rounded-full bg-white shadow-md hover:shadow-lg transition"
+                        className="text-gray-700 font-semibold hover:text-gray-800 text-lg w-32 h-11 flex items-center justify-center rounded-full bg-white shadow-md hover:shadow-lg transition"
                       >
                         {!isConnected && !isUIReady ? <CircularLoader size={30} /> : "Connect"}
                       </button>
                     ) : (
                       <>
                         <div className="flex items-space-around justify-between w-56">
-                          <li className="text-gray-700 text-lg w-40 h-11 flex items-center justify-center border border-gray-200 rounded-lg transition">
+                          <li className="text-gray-700 text-lg w-40 h-11 font-semibold flex items-center justify-center  rounded-lg transition">
                             <img src={copyImage} className="w-5 h-5 cursor-pointer" onClick={() => copyAddress(address)} alt="" />
                             <p className="ml-2 text-center font-bold">{address ? address?.slice(0, 4) + "..." + address?.slice(-4) : "wallet address"}</p>
                           </li>
@@ -515,13 +410,13 @@ function Header() {
                             >
                               <button
                                 onClick={openProfile}
-                                className="block w-full text-center px-4 py-2 text-gray-700 hover:bg-gray-100"
+                                className="block w-full text-center px-4 py-2 text-gray-700 font-semibold hover:bg-gray-100"
                               >
                                 Profile
                               </button>
                               <button
                                 onClick={() => disconnectWallet()}
-                                className="block w-full text-center px-4 py-2 text-red-600 hover:bg-gray-100"
+                                className="block w-full text-center px-4 py-2 text-red-600 font-semibold hover:bg-gray-100"
                               >
                                 Logout
                               </button>
@@ -543,169 +438,62 @@ function Header() {
           >
             {menuOpen ? <IoClose /> : <IoMenu />}
           </button>
-
-
           {/* Mobile Menu */}
           <ul
-            className={`absolute top-full left-0 w-full bg-gray-200 lg:hidden flex flex-col items-center z-[1]
+            className={`absolute top-full font-semibold left-0 w-full bg-gray-200 lg:hidden flex flex-col items-center z-[1]
              space-y-4 py-4 shadow-lg ${menuOpen ? "block" : "hidden"}`}
           >
-            <li onClick={() => { setMenuOpen(!menuOpen) }}><Link to="/home" className="mobile-nav-link text-gray-700 hover:text-gray-800 text-lg w-32 h-11 flex items-center justify-center rounded-full bg-white shadow-md hover:shadow-lg transition">Home</Link></li>
+            <li onClick={() => { setMenuOpen(!menuOpen) }}><Link to="/home" className="mobile-nav-link text-gray-700 font-semibold hover:text-gray-800 text-lg w-32 h-11 flex items-center justify-center rounded-full bg-white shadow-md hover:shadow-lg transition">Home</Link></li>
             {user ? (
-              user.userType === "User" ? (
-                <>
-                  <li>
-                    <Link
-                      to="/userDashboard"
-                      onClick={() => setMenuOpen(!menuOpen)}
-                      className="mobile-nav-link text-gray-700 hover:text-gray-800 text-lg w-32 h-11 flex items-center justify-center rounded-full bg-white shadow-md hover:shadow-lg transition"
+              <>
+                <li>
+                  <Link
+                    to={`${user?.userType === "SuperAdmin" ? "/superadmin" : user?.userType === "Admin" ? "/adminDashboard" : user?.userType === "User" ? "/userDashboard" : "/not-found"}`}
+                    onClick={() => setMenuOpen(!menuOpen)}
+                    className="mobile-nav-link text-gray-700 font-semibold hover:text-gray-800 text-lg w-32 h-11 flex items-center justify-center rounded-full bg-white shadow-md hover:shadow-lg transition"
+                  >
+                    Dashboard
+                  </Link>
+                </li>
+                <li className="relative">
+                  <div
+                    className="text-gray-700 font-semibold hover:text-gray-800 text-lg pl-6 pr-6 h-11 flex items-center justify-center rounded-full bg-white shadow-md hover:shadow-lg transition cursor-pointer"
+                    onClick={() => setBalanceOpen2(!balanceOpen2)}
+                  >
+                    <img src={walletImage} className="w-5 h-5" alt="" />
+                    <p className="ml-2  max-w-[110px]">{Number(walletBalance).toFixed(2)} ETH</p>
+                    <svg
+                      className="w-4 h-4 ml-1 text-gray-600 flex-shrink-0"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      viewBox="0 0 24 24"
                     >
-                      Dashboard
-                    </Link>
-                  </li>
-                  <li className="relative">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </div>
+                  {balanceOpen2 && (
                     <div
-                      className="text-gray-700 hover:text-gray-800 text-lg pl-6 pr-6 h-11 flex items-center justify-center rounded-full bg-white shadow-md hover:shadow-lg transition cursor-pointer"
-                      onClick={() => setBalanceOpen2(!balanceOpen2)}
+                      ref={popupRef3}
+                      className="absolute top-full left-0 mt-1 ml-2 w-36 bg-white rounded-lg shadow-lg z-50 overflow-hidden"
                     >
-                      <img src={walletImage} className="w-5 h-5" alt="" />
-                      <p className="ml-2">{Number(walletBalance).toFixed(2)} ETH</p>
-                      <svg
-                        className="w-4 h-4 ml-1 text-gray-600"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        viewBox="0 0 24 24"
+                      <button
+                        onClick={withdrawPopupHandler}
+                        className="block w-full text-center px-4 py-2 font-semibold text-gray-700 hover:bg-gray-100"
                       >
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                      </svg>
+                        Transfer
+                      </button>
+                      <button
+                        onClick={QrPopupHandler}
+                        className="block w-full text-center px-4 py-2 font-semibold text-gray-600 hover:bg-gray-100"
+                      >
+                        Recieve
+                      </button>
                     </div>
-                    {balanceOpen2 && (
-                      <div
-                        ref={popupRef3}
-                        className="absolute top-full left-0 mt-1 ml-2 w-36 bg-white rounded-lg shadow-lg z-50 overflow-hidden"
-                      >
-                        <button
-                          onClick={withdrawPopupHandler}
-                          className="block w-full text-center px-4 py-2 text-gray-700 hover:bg-gray-100"
-                        >
-                          Transfer
-                        </button>
-                        <button
-                          onClick={QrPopupHandler}
-                          className="block w-full text-center px-4 py-2 text-gray-600 hover:bg-gray-100"
-                        >
-                          Recieve
-                        </button>
-                      </div>
-                    )}
-                  </li>
-                </>
-              ) : user.userType === "Admin" ? (
-                <>
-                  <li>
-                    <Link
-                      to="/adminDashboard"
-                      onClick={() => setMenuOpen(!menuOpen)}
-                      className="mobile-nav-link text-gray-700 hover:text-gray-800 text-lg w-32 h-11 flex items-center justify-center rounded-full bg-white shadow-md hover:shadow-lg transition"
-                    >
-                      Dashboard
-                    </Link>
-                  </li>
-                  <li className="relative">
-                    <div
-                      className="text-gray-700 hover:text-gray-800 text-lg pl-6 pr-6 h-11 flex items-center justify-center rounded-full bg-white shadow-md hover:shadow-lg transition cursor-pointer"
-                      onClick={() => setBalanceOpen2(!balanceOpen2)}
-                    >
-                      <img src={walletImage} className="w-5 h-5" alt="" />
-                      <p className="ml-2"> {Number(walletBalance).toFixed(2)} ETH
-                      </p>
-                      <svg
-                        className="w-4 h-4 ml-1 text-gray-600"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        viewBox="0 0 24 24"
-                      >
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                      </svg>
-                    </div>
-                    {balanceOpen2 && (
-                      <div
-                        ref={popupRef3}
-                        className="absolute top-full left-0 mt-1 ml-2 w-36 bg-white rounded-lg shadow-lg z-50 overflow-hidden"
-                      >
-                        <button
-                          onClick={withdrawPopupHandler}
-                          className="block w-full text-center px-4 py-2 text-gray-700 hover:bg-gray-100"
-                        >
-                          Transfer
-                        </button>
-                        <button
-                          onClick={QrPopupHandler}
-                          className="block w-full text-center px-4 py-2 text-gray-600 hover:bg-gray-100"
-                        >
-                          Recieve
-                        </button>
-                      </div>
-                    )}
-                  </li>
-                </>
-              ) : user.userType === "SuperAdmin" ? (
-                <>
-
-                  <li>
-                    <Link
-                      to="/superadmin"
-                      onClick={() => setMenuOpen(!menuOpen)}
-                      className="mobile-nav-link text-gray-700 hover:text-gray-800 text-lg w-32 h-11 flex items-center justify-center rounded-full bg-white shadow-md hover:shadow-lg transition"
-                    >
-                      Dashboard
-                    </Link>
-                  </li>
-                  <li className="relative">
-                    <div
-                      className="text-gray-700 hover:text-gray-800 text-lg pl-6 pr-6 h-11 flex items-center justify-center rounded-full bg-white shadow-md hover:shadow-lg transition cursor-pointer"
-                      onClick={() => setBalanceOpen2(!balanceOpen2)}
-                    >
-                      <img src={walletImage} className="w-5 h-5" alt="" />
-                      <p className="ml-2">{Number(walletBalance).toFixed(2)} ETH</p>
-                      <svg
-                        className="w-4 h-4 ml-1 text-gray-600"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        viewBox="0 0 24 24"
-                      >
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                      </svg>
-                    </div>
-
-                    {balanceOpen2 && (
-                      <div
-                        ref={popupRef3}
-                        className="absolute top-full left-0 mt-1 ml-2 w-36 bg-white rounded-lg shadow-lg z-50 overflow-hidden"
-                      >
-                        <button
-                          onClick={withdrawPopupHandler}
-                          className="block w-full text-center px-4 py-2 text-gray-700 hover:bg-gray-100"
-                        >
-                          Transfer
-                        </button>
-                        <button
-                          onClick={QrPopupHandler}
-                          className="block w-full text-center px-4 py-2 text-gray-600 hover:bg-gray-100"
-                        >
-                          Recieve
-                        </button>
-                      </div>
-                    )}
-                  </li>
-                </>
-
-              ) : null
+                  )}
+                </li>
+              </>
             ) : null}
-
             <li>
               {(user || !isConnected) ?
                 (
@@ -714,7 +502,7 @@ function Header() {
                     {!isConnected && !user ? (
                       <button
                         onClick={() => connect()}
-                        className="text-gray-700 hover:text-gray-800 text-lg w-32 h-11 flex items-center justify-center rounded-full bg-white shadow-md hover:shadow-lg transition"
+                        className="text-gray-700 hover:text-gray-800 font-semibold text-lg w-32 h-11 flex items-center justify-center rounded-full bg-white shadow-md hover:shadow-lg transition"
                       >
                         {!isConnected && !isUIReady ? <CircularLoader size={30} /> : "Connect"}
                       </button>
@@ -722,13 +510,13 @@ function Header() {
                       <div className="relative inline-block text-left">
                         <button
                           onClick={openProfile}
-                          className="text-gray-700 hover:text-gray-800 text-lg w-28 h-11 flex items-center justify-center rounded-full bg-white shadow-md hover:shadow-lg transition"
+                          className="text-gray-700 hover:text-gray-800 font-semibold text-lg w-28 h-11 flex items-center justify-center rounded-full bg-white shadow-md hover:shadow-lg transition"
                         >
                           Profile
                         </button>
                         <button
                           onClick={() => disconnectWallet()}
-                          className="text-red-800 hover:text-red-900 text-lg w-32 h-11 flex items-center justify-center rounded-full bg-white shadow-md mt-4 hover:shadow-lg transition"
+                          className="text-red-800 hover:text-red-900 font-semibold text-lg w-32 h-11 flex items-center justify-center rounded-full bg-white shadow-md mt-4 hover:shadow-lg transition"
                         >
                           Logout
                         </button>
@@ -736,7 +524,7 @@ function Header() {
                     )}
                   </>
                 ) : (
-                  <button onClick={() => connect()} className=" mobile-nav-link text-gray-700 hover:text-gray-800 text-lg w-32 h-11 flex items-center justify-center rounded-full bg-white shadow-md hover:shadow-lg transition"> {isUIReady ? <CircularLoader size={20} /> : "Connect"}</button>
+                  <button onClick={() => connect()} className=" mobile-nav-link text-gray-700 font-semibold hover:text-gray-800 text-lg w-32 h-11 flex items-center justify-center rounded-full bg-white shadow-md hover:shadow-lg transition"> {isUIReady ? <CircularLoader size={20} /> : "Connect"}</button>
                 )}
             </li>
 

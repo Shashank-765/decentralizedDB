@@ -214,7 +214,7 @@ export default function UserDashboard() {
           }
           : user
       )
-    ); 
+    );
     setShowModal(false);
     setShowConfirmModal(false);
     setPendingApprovalData(null);
@@ -250,10 +250,11 @@ export default function UserDashboard() {
       }
       const approveOrNot = 'reject';
       if (approveafterreject) {
-        setShowConfirmModal(true);
-        setShowModal(false);
-        setPendingApprovalData({ walletAddress, index, cid, approved: approveOrNot });
-        setMessageForConfirmPopup('Are you sure you want to reject this document?');
+        return;
+        // setShowConfirmModal(true);
+        // setShowModal(false);
+        // setPendingApprovalData({ walletAddress, index, cid, approved: approveOrNot });
+        // setMessageForConfirmPopup('Are you sure you want to reject this document?');
       } else {
         await handleApprove(walletAddress, index, cid, approveOrNot);
       }
@@ -395,7 +396,7 @@ export default function UserDashboard() {
                             <td className="py-4 px-6 text-center">
                               {user.status === "Approved" ? (
                                 <span className="text-green-600 flex items-center justify-center gap-1">
-                                  {user.fileLinks.length > 0 ? <> <FaCheckCircle /> Approved</> : 'Not Yet'}
+                                  {user.fileLinks.length > 0 ? <> <FaCheckCircle /> </> : 'Not Yet'}
                                 </span>
                               ) : (
                                 <span className="text-yellow-500 flex items-center justify-center gap-1">
@@ -445,8 +446,8 @@ export default function UserDashboard() {
 
             }
             {showModal && (
-              <div  className="fixed inset-0 z-50 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center px-4">
-                <div ref={modalRef} className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[85vh]  p-8 overflow-y-auto scrollbar-hide">
+              <div className="fixed inset-0 z-50 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center px-4">
+                <div ref={modalRef} className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[85vh] animate-fadeIn scale-100 transition-transform duration-300  p-8 overflow-y-auto scrollbar-hide">
                   <h3 className="text-2xl font-bold text-gray-800 mb-6 text-center">File Previews</h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
                     {selectedFiles.map((file, index) => (
@@ -476,7 +477,7 @@ export default function UserDashboard() {
                           </>
                         ) :
                           file.approved == 1 ? (
-                            <span className="mt-2 text-green-600 flex border border-green-500 p-1 pl-2 pr-2 rounded-lg hover:bg-green-600 hover:text-white items-center cursor-pointer gap-1" onClick={() => selectedUser && reject(selectedUser, file.index, file.cid, true)}>
+                            <span className="mt-2 text-green-600 flex border border-green-500 p-1 pl-2 pr-2 rounded-lg items-center gap-1" onClick={() => selectedUser && reject(selectedUser, file.index, file.cid, true)}>
                               <FaCheckCircle className="w-5 h-5" /> Approved
                             </span>
                           ) :

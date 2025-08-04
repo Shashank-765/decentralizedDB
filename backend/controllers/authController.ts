@@ -5,8 +5,8 @@ import * as authService from "../services/authService";
 
 export const createAdmin = async (req: Request, res: Response) => {
     try {
-        const { name, email,orgContractAddress,organization,privateKey,walletAddress } = req.body;
-        const user = await authService.createAdmin(name, email,orgContractAddress,organization,privateKey,walletAddress);
+        const { name, email, orgContractAddress, organization, privateKey, walletAddress } = req.body;
+        const user = await authService.createAdmin(name, email, orgContractAddress, organization, privateKey, walletAddress);
         res.status(201).json({ message: "User registered successfully", user });
     } catch (error: any) {
         res.status(400).json({ error: error.message });
@@ -110,13 +110,13 @@ export const rejectDocument = async (req: Request, res: Response) => {
 }
 export const getGraphData = async (req: Request, res: Response) => {
     try {
-        const {filterType, startDate, endDate } = req.query;
-        
-        let format = "%Y-%m"; 
+        const { filterType, startDate, endDate } = req.query;
+
+        let format = "%Y-%m";
         if (filterType === "day") format = "%Y-%m-%d";
         else if (filterType === "week") format = "%Y-%U";
         else if (filterType === "year") format = "%Y";
-        const data = await authService.getGraphData(format, startDate as string,endDate as string);
+        const data = await authService.getGraphData(format, startDate as string, endDate as string);
         res.status(200).json({ message: "User Graph Data Fetched successful", data });
     } catch (error: any) {
         res.status(400).json({ error: error.message });

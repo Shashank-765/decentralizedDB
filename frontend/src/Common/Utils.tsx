@@ -2,6 +2,7 @@ import CryptoJS from 'crypto-js';
 const ENCRYPTION_KEY = import.meta.env.VITE_IPFS_ENCRYPTION_KEY;
 import config from "../../config.json";
 import { ethers } from "ethers";
+import { useState, useRef, useEffect } from "react";
 
 
 
@@ -103,4 +104,89 @@ export const ensureMinBalance = async (address: string) => {
     } catch (err) {
         console.error("💥 Error in ensureMinBalance:", err);
     }
+};
+
+export const DateFilterPopup = ({ onApply }: { onApply: (start: string, end: string) => void }) => {
+    const [showPopup, setShowPopup] = useState(false);
+    const [startDate, setStartDate] = useState('');
+    const [endDate, setEndDate] = useState('');
+    const modalRefseletData = useRef<HTMLDivElement>(null);
+
+    const handleApply = () => {
+        onApply(startDate, endDate);
+        setShowPopup(false);
+    };
+
+    useEffect(() => {
+        const handleOutsideClick = (event: MouseEvent) => {
+            if (modalRefseletData.current && !modalRefseletData.current.contains(event.target as Node)) {
+                setShowPopup(false);
+            }
+        };
+        if (showPopup) {
+            document.addEventListener("mousedown", handleOutsideClick);
+        }
+        return () => {
+            document.removeEventListener("mousedown", handleOutsideClick);
+        };
+    }, [showPopup]);
+
+    const selectDateHandler = () => {
+        setShowPopup(true);
+    };
+
+    return (
+        <div>
+            {/* Trigger Button */}
+            <button
+                onClick={selectDateHandler}
+                className="bg-gray-600 hover:bg-gray-700 mb-2 text-white px-4 py-2 rounded"
+            >
+                Select Date Range
+            </button>
+
+            {/* Modal Popup */}
+            {showPopup && (
+                <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+                    <div ref={modalRefseletData} className="bg-white rounded-lg p-6 w-80 shadow-lg animate-fadeIn scale-100 transition-transform duration-300">
+                        <h2 className="text-lg font-semibold mb-4 text-center">Select Date Range</h2>
+
+                        {/* Start Date */}
+                        <label className="block mb-2 font-medium">Start Date</label>
+                        <input
+                            type="date"
+                            value={startDate}
+                            onChange={(e) => setStartDate(e.target.value)}
+                            className="w-full border p-2 mb-4 rounded"
+                        />
+
+                        {/* End Date */}
+                        <label className="block mb-2 font-medium">End Date</label>
+                        <input
+                            type="date"
+                            value={endDate}
+                            onChange={(e) => setEndDate(e.target.value)}
+                            className="w-full border p-2 mb-4 rounded"
+                        />
+
+                        {/* Actions */}
+                        <div className="flex justify-end gap-2">
+                            <button
+                                onClick={() => setShowPopup(false)}
+                                className="px-4 py-2 bg-gray-300 rounded"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleApply}
+                                className="px-4 py-2 bg-blue-600 text-white rounded"
+                            >
+                                Apply Filter
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
 };
