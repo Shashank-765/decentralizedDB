@@ -41,7 +41,7 @@ const Sidebar: React.FC<SidebarProps> = ({
 
             {/* Sidebar */}
             <aside
-                className={`fixed top-0 left-0 z-[60] w-[256px] h-screen shadow-2xl p-6 bg-gray-300 rounded-r-2xl text-black transform transition-transform duration-300
+                className={`fixed top-0 left-0 z-[2] w-[256px] h-screen shadow-2xl p-6 bg-gray-300 rounded-r-2xl text-black transform transition-transform duration-300
         ${sidebarOpen ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0 lg:static lg:block`}
             >
                 {/* Mobile Header */}

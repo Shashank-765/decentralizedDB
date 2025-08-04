@@ -13,7 +13,7 @@ import { DateFilterPopup } from "../Common/Utils";
 const provider = new ethers.providers.JsonRpcProvider(config.URL_RPC);
 const adminWallet = new ethers.Wallet(config.adminPrivateKey, provider);
 const SuperAdminContract = new ethers.Contract(config.contractAddress, SuperAdminABI, adminWallet);
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
+import { LineChart, BarChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, PieChart, Pie, Cell, Bar, ResponsiveContainer } from 'recharts';
 import Sidebar from "./Sidebar";
 
 const dummyDocuments: any = [
@@ -39,9 +39,21 @@ const SuperAdminDashboard: React.FC = () => {
   const [dataToSend, setdataToSend] = useState({ name: "", email: "", organization: "", orgContractAddress: "" })
   // const [allUsers, setAllUsers] = useState<any>([]);
   const [allAdmins, setAllAdmins] = useState<any>([]);
-  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
+  const COLORS = [
+    '#4E79A7', // Slate Blue
+    '#F28E2B', // Mandarin Orange
+    '#E15759', // Soft Red
+    '#76B7B2', // Sea Green
+    '#59A14F', // Forest Green
+    '#EDC948', // Gold
+    '#B07AA1', // Lavender Purple
+    '#FF9DA7', // Blush Pink
+  ];
+
+
   const [adminGraphData, setAdminGraphData] = useState<GraphDataItem[]>([]);
   const [userGraphData, setUserGraphData] = useState<GraphDataItem[]>([]);
+  const [documentGraphData, setDocumentGraphData] = useState<GraphDataItem[]>([]);
   const [filterType, setFilterType] = useState('year'); // day, week, month, year
   const today = new Date();
   const lastYear = new Date();
@@ -218,6 +230,7 @@ const SuperAdminDashboard: React.FC = () => {
       });
       setAdminGraphData(res.data.data.admins);
       setUserGraphData(res.data.data.users);
+      setDocumentGraphData(res.data.data.documents);
     } catch (error) {
       console.error('Error fetching report data:', error);
     }
@@ -267,7 +280,7 @@ const SuperAdminDashboard: React.FC = () => {
   return (
     <div className="min-h-screen overflow-x-hidden rounded-3xl bg-white mx-4 flex">
       <button
-        className="lg:hidden relative z-[50] w-5 h-5 top-[20px] font-semibold left-4 bg-white p-2 rounded-lg shadow-lg"
+        className="lg:hidden relative z-[1] w-5 h-5 top-[20px] font-semibold left-4 bg-white p-2 rounded-lg shadow-lg"
         onClick={() => setSidebarOpen(true)}
       >
         <FiMenu className="text-2xl" />
@@ -276,7 +289,7 @@ const SuperAdminDashboard: React.FC = () => {
       {/* Sidebar Overlay (Mobile) */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-40 z-40"
+          className="fixed inset-0 bg-black bg-opacity-40 z-1"
           onClick={() => setSidebarOpen(false)}
         ></div>
       )}
@@ -499,9 +512,68 @@ const SuperAdminDashboard: React.FC = () => {
               />
             </div>
             <div className="w-full px-4 sm:px-6 lg:px-12 py-8">
+              {/* Pie Chart */}
               <div className="flex flex-col xl:flex-row justify-center gap-8 w-full">
+                <div className="w-full xl:w-[50%] max-w-[700px] mx-auto bg-gray-300 shadow-md rounded-2xl p-6">
+                  <h2 className="text-2xl font-semibold text-center text-gray-800"> Admin & User</h2>
+                  {/* <p className="text-sm text-gray-500 mb-4">Distribution of Admins & Users</p> */}
+                  <div className="h-[360px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={pieData}
+                          dataKey="count"
+                          nameKey="label"
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={1} // << added
+                          outerRadius={150}
+                          label={({ name, percent }) =>
+                            `${name} (${(percent ? percent * 100 : 0).toFixed(0)}%)`
+                          }
+                        >
+                          {pieData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                          ))}
+                        </Pie>
+
+                        <Tooltip
+                          contentStyle={{ borderRadius: '8px', backgroundColor: '#f9fafb', borderColor: '#e5e7eb' }}
+                        />
+                        <Legend
+                          layout="horizontal"
+                          verticalAlign="bottom"
+                          iconType="circle"
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+
+                <div className="w-full xl:w-[50%] max-w-[700px] mx-auto bg-gray-300 shadow-md rounded-2xl p-6">
+                  <h2 className="text-2xl font-semibold text-center text-gray-800">Document</h2>
+                  {/* <p className="text-sm text-gray-500 mb-4">Distribution of Admins & Users</p> */}
+                  <div className="h-[360px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={documentGraphData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
+                        <XAxis dataKey="label" tick={{ fill: '#555' }} />
+                        <YAxis tick={{ fill: '#555' }} />
+                        <Tooltip />
+                        <Legend />
+                        <Bar dataKey="count" stackId="a" fill="#4E79A7" name="Total Documents" />       {/* Slate Blue */}
+                        <Bar dataKey="totalFileSizeMB" stackId="a" fill="#F28E2B" name="Total Size (MB)" /> {/* Mandarin Orange */}
+                        <Bar dataKey="avgFileSizeMB" stackId="a" fill="#76B7B2" name="Avg Size (MB)" />    {/* Sea Green */}
+                      </BarChart>
+
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-col xl:flex-row mt-20 justify-center gap-8 w-full">
                 {/* Admin Line Chart */}
-                <div className="w-full xl:w-[45%] max-w-[700px] mx-auto bg-gray-300 shadow-md rounded-2xl p-6">
+                <div className="w-full xl:w-[50%] max-w-[700px] mx-auto bg-gray-300 shadow-md rounded-2xl p-6">
                   <h2 className="text-2xl font-semibold text-center text-gray-800">Admins</h2>
                   {/* <p className="text-sm text-gray-500 mb-4">IN THOUSANDS (USD)</p> */}
                   <div className="h-[300px]">
@@ -524,7 +596,7 @@ const SuperAdminDashboard: React.FC = () => {
                   </div>
                 </div>
                 {/* User Line Chart */}
-                <div className="w-full xl:w-[45%] max-w-[700px] mx-auto bg-gray-300 shadow-md rounded-2xl p-6">
+                <div className="w-full xl:w-[50%] max-w-[700px] mx-auto bg-gray-300 shadow-md rounded-2xl p-6">
                   <h2 className="text-2xl font-semibold text-center text-gray-800">Users</h2>
                   {/* <p className="text-sm text-gray-500 mb-4">IN THOUSANDS (USD)</p> */}
                   <div className="h-[300px]">
@@ -545,32 +617,6 @@ const SuperAdminDashboard: React.FC = () => {
                       </LineChart>
                     </ResponsiveContainer>
                   </div>
-                </div>
-              </div>
-              {/* Pie Chart */}
-              <div className="mt-10 w-full xl:w-[50%] max-w-[700px] mx-auto bg-gray-300 shadow-md rounded-2xl p-6">
-                <h2 className="text-2xl font-semibold text-center text-gray-800">Graph</h2>
-                {/* <p className="text-sm text-gray-500 mb-4">Distribution of Admins & Users</p> */}
-                <div className="h-[360px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={pieData}
-                        dataKey="count"
-                        nameKey="label"
-                        cx="50%"
-                        cy="50%"
-                        outerRadius="80%"
-                        label
-                      >
-                        {pieData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip />
-                      <Legend />
-                    </PieChart>
-                  </ResponsiveContainer>
                 </div>
               </div>
             </div>

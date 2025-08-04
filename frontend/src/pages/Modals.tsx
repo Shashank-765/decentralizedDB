@@ -91,7 +91,7 @@ export const QrcodeModel = ({ walletAddress, onClose, logo }: { walletAddress: s
     }
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div ref={popupRef1} className="bg-white p-6 rounded-lg shadow-lg text-center w-full max-w-lg">
+            <div ref={popupRef1} className="bg-white p-6 rounded-lg shadow-lg text-center w-full max-w-lg animate-fadeIn scale-100 transition-transform duration-300">
                 <div className="flex justify-between items-center mb-4">
                     <h2 className="text-lg font-semibold text-gray-800">Wallet QR Code</h2>
                     <button
@@ -144,7 +144,7 @@ export const WithdrawModal = ({ onClose }: { onClose: () => void }) => {
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div ref={popupRef2} className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
+            <div ref={popupRef2} className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md animate-fadeIn scale-100 transition-transform duration-300">
                 <div className="flex justify-between items-center mb-4">
                     <h2 className="text-xl font-semibold text-gray-800">Withdraw Modal</h2>
                     <button
@@ -181,7 +181,7 @@ export const WithdrawModal = ({ onClose }: { onClose: () => void }) => {
                             className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
                     </div>
-
+                    <p className="text-sm font-medium text-gray-700">Gas Fee: 0.0001 ETH</p>
                     <button
                         onClick={handleTransfer}
                         className="w-full bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 rounded-lg transition"

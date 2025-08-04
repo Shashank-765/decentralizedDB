@@ -134,8 +134,8 @@ export default function UserProfile() {
       )}
 
       {editOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50">
-          <div ref={popupRef} className="bg-white p-6 rounded-xl w-full max-w-xl shadow-xl relative">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+          <div ref={popupRef} className="bg-white p-6 rounded-xl w-full max-w-xl shadow-xl relative animate-fadeIn scale-100 transition-transform duration-300">
             <h2 className="text-xl font-bold mb-4">Edit Profile</h2>
             <form onSubmit={handleEditSubmit} className="space-y-4">
               <input type="text" name="name" placeholder="Full Name" value={formData.name} onBlur={handleBlur} onChange={handleChange} className="w-full p-2 border rounded" />

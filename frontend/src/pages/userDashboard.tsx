@@ -21,9 +21,12 @@ interface DecryptedFile {
     folderName: string;
     type: string;
 }
+interface Organization {
+    orgContractAddress: string;
+    [key: string]: any;
+}
 
 let Jsonprovider = new ethers.providers.JsonRpcProvider(config.URL_RPC);
-// let wallet = new ethers.Wallet(config.adminPrivateKey, Jsonprovider);
 
 import { OrgContractABI } from '../../NewAbi.tsx'
 const ipfs = create({
@@ -39,21 +42,12 @@ const UserDashboard: React.FC = () => {
     const [files, setFiles] = useState<File[]>([]);
     const [ipfsFile, setIpfsFile] = useState<string[]>([]);
     const [ipfsContents, setIpfsContents] = useState<any[]>([]);
-    const [uploadProgress, setUploadProgress] = useState<number>(0);
     const [isCircularLoading, setIsCirculrLoading] = useState(false);
     const [signer, setSigner] = useState<ethers.Signer | null>(null);
     const [orgContractAddress, setOrgContractAddress] = useState<any>([]);
     const [sidebarOpen, setSidebarOpen] = useState(false);
-    interface Organization {
-        orgContractAddress: string;
-        [key: string]: any;
-    }
-
     const [organizations, setOrganizations] = useState<Organization[]>([]);
-    // const approvedDocs = dummyDocuments.filter((doc) => doc.status === "approved");
-    // const rejectedDocs = dummyDocuments.filter((doc) => doc.status === "rejected");
     const rejectedDocs = [];
-    // const pendingDocs = dummyDocuments.filter((doc) => doc.status === "pending");
     const pendingDocs = [];
     const closeModal = () => setModalType(null);
     const [previewDoc, setPreviewDoc] = useState<DecryptedFile | null>(null);
@@ -77,6 +71,7 @@ const UserDashboard: React.FC = () => {
             console.log(error, "error")
         }
     }
+
     useEffect(() => {
         fetchAllOrganization();
     }, []);
@@ -106,6 +101,7 @@ const UserDashboard: React.FC = () => {
         }
 
     };
+
     useEffect(() => {
         async function getSigner() {
             try {
@@ -127,13 +123,6 @@ const UserDashboard: React.FC = () => {
         getSigner();
     }, [Jsonprovider]);
 
-
-    // useEffect(() => {
-    //     if (userData?.walletAddress) {
-    //             const contract = new ethers.Contract(userData?.orgContractAddress, OrgContractABI, Jsonprovider);
-    //             contract.getApprovedDocuments(userData.walletAddress).then(setIpfsFile).finally(() => setLoading(false));
-    //     }
-    // }, [userData?.walletAddress]);
     useEffect(() => {
         const fetchApprovedDocuments = async () => {
             if (!userData?.walletAddress || organizations.length === 0) return;
@@ -158,8 +147,6 @@ const UserDashboard: React.FC = () => {
 
         fetchApprovedDocuments();
     }, [userData?.walletAddress, organizations]);
-
-
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -373,11 +360,9 @@ const UserDashboard: React.FC = () => {
                 return;
             }
             const contract = new ethers.Contract(orgContractAddress, OrgContractABI, signer);
-            console.log('wallet, folderCid', wallet, folderCid)
             const tx = await contract.uploadDocument(folderCid, type);
             await tx.wait();
             setFiles([])
-            setUploadProgress(0);
             setIsCreateModelOpen(false);
             setIsCirculrLoading(false);
             ToastMessage("The Document uploaded Successfully", "successs", tx.hash || "")
@@ -385,7 +370,6 @@ const UserDashboard: React.FC = () => {
         } catch (error: any) {
             setFiles([])
             setIsCirculrLoading(false);
-            setUploadProgress(0);
             ToastMessage(`${error?.reason}`, "error", "")
             console.error("Transaction Failed:", error);
         }
@@ -398,38 +382,14 @@ const UserDashboard: React.FC = () => {
             ToastMessage("Please select a file.", "error", "");
             return;
         }
-
-        setUploadProgress(0);
-        let progress = 0;
-        const encryptedFiles: File[] = [];
-
-        for (const file of files) {
-            const encrypted = await encryptFile(file);
-            encryptedFiles.push(encrypted);
-        }
-
+        const encrypted = await encryptFile(files[0]);
         let folderCid: string | undefined;
-        let lastFile: any = null;
-        const totalFiles = encryptedFiles.length;
-        let uploadedCount = 0;
-        for await (const file of ipfs.addAll(encryptedFiles, { wrapWithDirectory: true })) {
-            lastFile = file;
-            folderCid = file.cid.toString();
+        const result = await ipfs.add(encrypted, { wrapWithDirectory: true });
 
-            if (file.path !== "") {
-                uploadedCount++;
-                progress = Math.min((uploadedCount / totalFiles) * 100, 100);
-                setUploadProgress(progress);
-            }
-        }
+        folderCid = result.cid.toString();
 
-        if (lastFile?.path && !lastFile.path.includes("/")) {
-            folderCid = lastFile.cid.toString();
-        }
-
-        if (progress >= 100 && folderCid) {
-
-            console.log(folderCid, 'folderCid documents only============>');
+        if (folderCid) {
+            console.log(folderCid, 'folderCid of documents only============>');
             const jsonDataToStoreCid = {
                 folderCid,
                 name: formData.name,
@@ -444,12 +404,13 @@ const UserDashboard: React.FC = () => {
                 foldercid2 = file.cid.toString();
             }
 
-            console.log(foldercid2, 'this is cid of json data =============>')
+            console.log(foldercid2, 'This is cid of json data =============>')
 
-            const response = await axios.post(`${config.URL_BACKEND}api/auth/addDocument`, {
+            await axios.post(`${config.URL_BACKEND}api/auth/addDocument`, {
                 userId: userData?._id,
                 cid: foldercid2,
                 type: formData.type,
+                fileSize: (encrypted.size / (1024 * 1024)).toFixed(2), // file size in MB
                 walletAddress: userData?.walletAddress,
             },
                 { headers: { _token: userData?.token } });
@@ -490,7 +451,7 @@ const UserDashboard: React.FC = () => {
     return (
         <div className="min-h-screen overflow-x-hidden rounded-3xl bg-white mx-4 flex ">
             <button
-                className="lg:hidden relative z-[50] w-5 h-5 top-[20px] font-semibold left-4 bg-white p-2 rounded-lg shadow-lg"
+                className="lg:hidden relative z-[1] w-5 h-5 top-[20px] font-semibold left-4 bg-white p-2 rounded-lg shadow-lg"
                 onClick={() => setSidebarOpen(true)}
             >
                 <FiMenu className="text-2xl" />
@@ -499,7 +460,7 @@ const UserDashboard: React.FC = () => {
             {/* Sidebar Overlay (Mobile) */}
             {sidebarOpen && (
                 <div
-                    className="fixed inset-0 bg-black bg-opacity-40 z-40"
+                    className="fixed inset-0 bg-black bg-opacity-40 z-1"
                     onClick={() => setSidebarOpen(false)}
                 ></div>
             )}
@@ -528,23 +489,26 @@ const UserDashboard: React.FC = () => {
                                         <div className="relative inline-block ml-2">
                                             <select
                                                 onChange={(e) => fetchFiles(e.target.value)}
-                                                className="appearance-none border border-gray-600 rounded-md py-2 px-4 pr-10 bg-white text-gray-800"
+                                                className="block w-40 appearance-none bg-white border border-gray-300 text-gray-800 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 px-4 py-2 pr-10 shadow-sm transition duration-150 ease-in-out"
                                             >
                                                 <option value="all">All</option>
                                                 {organizations.map((org: any, index) => (
-                                                    <option key={index} value={JSON.stringify({
-                                                        orgContractAddress: org.orgContractAddress,
-                                                        organization: org.organization,
-                                                    })}>
+                                                    <option
+                                                        key={index}
+                                                        value={JSON.stringify({
+                                                            orgContractAddress: org.orgContractAddress,
+                                                            organization: org.organization,
+                                                        })}
+                                                    >
                                                         {org.organization}
                                                     </option>
                                                 ))}
                                             </select>
 
                                             {/* Custom arrow icon */}
-                                            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4">
+                                            <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center pr-3">
                                                 <svg
-                                                    className="w-4 h-4 text-gray-600"
+                                                    className="w-5 h-5 text-gray-500"
                                                     fill="none"
                                                     stroke="currentColor"
                                                     strokeWidth="2"
@@ -645,7 +609,7 @@ const UserDashboard: React.FC = () => {
                             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70 p-4 sm:p-6">
                                 <div
                                     ref={modalRef}
-                                    className="relative w-full max-w-4xl bg-white rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col"
+                                    className="relative w-full max-w-4xl bg-white rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col animate-fadeIn scale-100 transition-transform duration-300"
                                 >
                                     {/* Close Button */}
                                     <button
@@ -714,14 +678,18 @@ const UserDashboard: React.FC = () => {
                         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
                             <div
                                 ref={modalRef2}
-                                className="bg-white p-8 md:p-10 rounded-2xl shadow-2xl w-[95%] xl:w-[1100px] max-h-[90vh] overflow-y-auto no-scrollbar"
+                                className="bg-white rounded-2xl shadow-2xl w-[95%] xl:w-[1100px] max-h-[90vh] overflow-y-auto no-scrollbar p-6 sm:p-10 animate-fadeIn scale-100 transition-transform duration-300"
                             >
-                                <h1 className="text-3xl text-center font-semibold text-gray-700 px-6 py-4">Create Document</h1>
-                                <form className="w-full mt-3 flex flex-col gap-8">
+                                <h1 className="text-3xl font-bold text-gray-800 text-center mb-8">Create Document</h1>
+
+                                <form className="space-y-8">
                                     {/* Input Fields */}
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                        {/* Name */}
                                         <div>
-                                            <label htmlFor="name" className="block text-sm font-medium text-gray-700">Name</label>
+                                            <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+                                                Name
+                                            </label>
                                             <input
                                                 id="name"
                                                 name="name"
@@ -729,35 +697,55 @@ const UserDashboard: React.FC = () => {
                                                 onChange={handleChange}
                                                 type="text"
                                                 placeholder="Enter name"
-                                                className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500"
+                                                className="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                                             />
                                         </div>
 
+                                        {/* Type Dropdown */}
                                         <div>
-                                            <label htmlFor="type" className="block text-sm font-medium text-gray-700">Type</label>
-                                            <select
-                                                id="type"
-                                                name="type"
-                                                value={formData.selectHoldData}
-                                                onChange={handleChange}
-                                                className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500"
-                                            >
-                                                <option value="">Select document type</option>
-                                                {organizations.map((org: any, index) => (
-                                                    <option key={index}
-                                                        value={JSON.stringify({
-                                                            orgContractAddress: org.orgContractAddress,
-                                                            organization: org.organization,
-                                                        })}
+                                            <label htmlFor="type" className="block text-sm font-medium text-gray-700 mb-1">
+                                                Type
+                                            </label>
+                                            <div className="relative">
+                                                <select
+                                                    id="type"
+                                                    name="type"
+                                                    value={formData.selectHoldData}
+                                                    onChange={handleChange}
+                                                    className="block w-full appearance-none bg-white border border-gray-300 text-gray-800 text-sm rounded-lg px-4 py-2 pr-10 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                >
+                                                    <option value="">Select document type</option>
+                                                    {organizations.map((org: any, index) => (
+                                                        <option
+                                                            key={index}
+                                                            value={JSON.stringify({
+                                                                orgContractAddress: org.orgContractAddress,
+                                                                organization: org.organization,
+                                                            })}
+                                                        >
+                                                            {org.organization}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
+                                                    <svg
+                                                        className="w-4 h-4 text-gray-500"
+                                                        fill="none"
+                                                        stroke="currentColor"
+                                                        strokeWidth="2"
+                                                        viewBox="0 0 24 24"
                                                     >
-                                                        {org.organization}
-                                                    </option>
-                                                ))}
-                                            </select>
+                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                                                    </svg>
+                                                </div>
+                                            </div>
                                         </div>
 
+                                        {/* Document ID */}
                                         <div>
-                                            <label htmlFor="documentId" className="block text-sm font-medium text-gray-700">Document ID</label>
+                                            <label htmlFor="documentId" className="block text-sm font-medium text-gray-700 mb-1">
+                                                Document ID
+                                            </label>
                                             <input
                                                 id="documentId"
                                                 name="documentId"
@@ -765,22 +753,21 @@ const UserDashboard: React.FC = () => {
                                                 onChange={handleChange}
                                                 type="text"
                                                 placeholder="Enter Document ID"
-                                                className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500"
+                                                className="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                                             />
                                         </div>
                                     </div>
 
-                                    {/* File Upload Box */}
+                                    {/* File Upload Area */}
                                     <div
-                                        className="w-full p-8 rounded-lg bg-gray-100 border-2 border-dashed border-gray-300 hover:border-indigo-500 transition-all flex flex-col items-center justify-center cursor-pointer shadow-lg"
                                         onDragOver={(e) => e.preventDefault()}
                                         onDrop={handleDrop}
+                                        className="w-full p-8 bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl text-center shadow-sm hover:border-green-500 transition cursor-pointer"
                                     >
-                                        <FaCloudUploadAlt className="text-indigo-500 text-6xl mb-4" />
-                                        <p className="text-gray-600 text-center">Drag & Drop your files here</p>
-                                        <p className="text-gray-500 text-sm">or</p>
-
-                                        <label className="mt-4 px-6 py-3 bg-indigo-500 text-white text-lg font-medium rounded-full shadow-md hover:bg-indigo-600 transition cursor-pointer">
+                                        <FaCloudUploadAlt className="text-green-500 text-6xl mx-auto mb-4" />
+                                        <p className="text-green-600 mb-1">Drag & Drop your files here</p>
+                                        <p className="text-green-500 text-sm mb-4">or</p>
+                                        <label className="inline-block px-6 py-3 bg-green-600 text-white text-sm font-medium rounded-full shadow hover:bg-green-700 transition cursor-pointer">
                                             Select Files
                                             <input
                                                 type="file"
@@ -791,87 +778,58 @@ const UserDashboard: React.FC = () => {
                                         </label>
                                     </div>
 
-                                    {/* Selected Files */}
+                                    {/* Selected Files List */}
                                     {files.length > 0 && (
-                                        <div className="bg-gray-200 p-4 rounded-lg shadow-md border">
-                                            <h3 className="text-lg font-semibold text-gray-700 mb-2">Selected Files</h3>
+                                        <div className="bg-gray-100 p-4 rounded-xl shadow-md border">
+                                            <h3 className="text-lg font-semibold text-gray-800 mb-3">Selected Files</h3>
                                             <ul className="space-y-2">
                                                 {files.map((file, index) => (
                                                     <li
                                                         key={index}
-                                                        className="text-gray-700 bg-white px-4 py-2 rounded-md shadow-sm flex justify-between items-center"
+                                                        className="flex justify-between items-center bg-white p-3 rounded-lg shadow-sm text-gray-700"
                                                     >
-                                                        <div className="flex items-center gap-2">
-                                                            📄 {file.name}
-                                                            <span className="text-xs text-gray-500 ml-2">
-                                                                {(file.size / 1024).toFixed(2)} KB
-                                                            </span>
-                                                        </div>
+                                                        <span className="truncate flex-1">{file.name}</span>
+                                                        <span className="text-sm text-gray-500 ml-4">{(file.size / 1024).toFixed(2)} KB</span>
                                                         <button
                                                             onClick={() => handleRemoveFile(index)}
-                                                            className="text-red-500 hover:text-red-700 text-lg font-bold ml-4"
-                                                            aria-label="Remove file"
+                                                            className="ml-4 text-red-600 text-lg hover:text-red-800 font-semibold"
                                                         >
                                                             &times;
                                                         </button>
                                                     </li>
                                                 ))}
                                             </ul>
-
-                                        </div>
-                                    )}
-
-                                    {/* Upload Progress */}
-                                    {uploadProgress > 0 && (
-                                        <div>
-                                            <div className="w-full bg-gray-300 rounded-full h-4">
-                                                <div
-                                                    className="bg-indigo-500 h-4 rounded-full transition-all"
-                                                    style={{ width: `${uploadProgress}%` }}
-                                                ></div>
-                                            </div>
-                                            <p className="text-center text-gray-600 mt-2">{uploadProgress}% Uploaded</p>
                                         </div>
                                     )}
 
                                     {/* Buttons */}
-                                    <div className="flex flex-col sm:flex-row justify-between gap-4">
+                                    <div className="flex flex-col sm:flex-row justify-end gap-4 pt-4 border-t mt-6">
                                         <button
                                             type="button"
                                             onClick={() => setIsCreateModelOpen(false)}
-                                            className="w-full sm:w-auto bg-gray-200 hover:bg-gray-300 text-gray-700 py-3 px-6 rounded transition"
+                                            className="w-full sm:w-auto bg-gray-200 hover:bg-gray-300 text-gray-700 px-6 py-3 rounded-md transition"
                                         >
                                             Close
                                         </button>
                                         <button
                                             type="button"
                                             onClick={handleSubmit}
-                                            className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-md shadow-md transition"
+                                            className="w-full sm:w-auto bg-gray-600 hover:bg-gray-700 text-white font-bold px-6 py-3 rounded-md shadow-md transition"
                                         >
                                             {isCircularLoading ? <CircularLoader size={20} /> : 'Submit'}
                                         </button>
-
-                                        {/* {files.length > 0 && (
-                                            <button
-                                                type="button"
-                                                onClick={handleUpload}
-                                                className="w-full sm:w-auto bg-indigo-500 text-white py-3 px-6 rounded-md font-semibold shadow-md hover:bg-indigo-600 transition"
-                                            >
-                                                {isCircularLoading ? <CircularLoader size={20} /> : 'Upload Files'}
-                                            </button>
-                                        )} */}
-
-
                                     </div>
                                 </form>
                             </div>
                         </div>
+
                     )
                 }
             </main>
         </div>
     );
 };
+export default UserDashboard;
 
 // Reusable StatCard Component
 const StatCard: React.FC<{
@@ -900,4 +858,4 @@ const StatCard: React.FC<{
     );
 };
 
-export default UserDashboard;
+

@@ -206,7 +206,13 @@ export default function UserDashboard() {
     const tx = await contract.verifyDocument(walletAddress, index, key);
     await tx.wait();
     try {
-      const response = await axios.post(`${config.URL_BACKEND}api/auth/approveDocument`, { cid, [apiKey]: localUserData?._id },
+      let approveOrReject = 'approve';
+      if (approveOrNot == 'approve') {
+        approveOrReject = 'approveDocument';
+      } else {
+        approveOrReject = 'rejectDocument';
+      }
+      const response = await axios.post(`${config.URL_BACKEND}api/auth/${approveOrReject}`, { cid, [apiKey]: localUserData?._id },
         { headers: { _token: localUserData?.token } }
       );
       if (response.status === 200) {
@@ -330,7 +336,7 @@ export default function UserDashboard() {
   return (
     <div className="min-h-screen overflow-x-hidden rounded-3xl bg-white mx-4 flex">
       <button
-        className="lg:hidden relative z-[50] w-5 h-5 top-[25px] font-semibold left-4 bg-white p-2 rounded-lg shadow-lg"
+        className="lg:hidden relative z-[1] w-5 h-5 top-[25px] font-semibold left-4 bg-white p-2 rounded-lg shadow-lg"
         onClick={() => setSidebarOpen(true)}
       >
         <FiMenu className="text-2xl" />
@@ -339,7 +345,7 @@ export default function UserDashboard() {
       {/* Sidebar Overlay (Mobile) */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-40 z-40"
+          className="fixed inset-0 bg-black bg-opacity-40 z-1"
           onClick={() => setSidebarOpen(false)}
         ></div>
       )}
@@ -402,11 +408,11 @@ export default function UserDashboard() {
                             </td>
                             <td className="py-4 px-6 text-center">
                               {user.status === "Approved" ? (
-                                <span className="text-green-600 flex items-center justify-center gap-1">
-                                  {user.fileLinks.length > 0 ? <> <FaCheckCircle /> </> : 'Not Yet'}
+                                <span className="text-green-600 font-semibold flex items-center justify-center gap-1">
+                                  {user.fileLinks.length > 0 ? <> <FaCheckCircle /> Confirmed</> : 'Not Yet'}
                                 </span>
                               ) : (
-                                <span className="text-yellow-500 flex items-center justify-center gap-1">
+                                <span className="text-yellow-500 font-semibold flex items-center justify-center gap-1">
                                   <FaTimesCircle /> Pending
                                 </span>
                               )}
@@ -456,7 +462,7 @@ export default function UserDashboard() {
               <div className="fixed inset-0 z-50 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center px-4">
                 <div ref={modalRef} className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[85vh] animate-fadeIn scale-100 transition-transform duration-300  p-8 overflow-y-auto scrollbar-hide">
                   <h3 className="text-2xl font-bold text-gray-800 mb-6 text-center">File Previews</h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 md:grid-cols-3 gap-6">
                     {selectedFiles.map((file, index) => (
                       <div key={index} className="flex flex-col items-center bg-gray-50 p-2 rounded-lg shadow">
                         <a href={file.url} target="_blank" rel="noopener noreferrer">
@@ -473,10 +479,10 @@ export default function UserDashboard() {
                         {!file.approved ? (
                           <>
                             <div className="flex gap-2">
-                              <button onClick={() => selectedUser && approve(selectedUser, file.index, file.cid)} className="mt-2 px-4 py-1 bg-green-500 text-white rounded-lg hover:bg-green-600 flex items-center gap-1">
+                              <button onClick={() => selectedUser && approve(selectedUser, file.index, file.cid)} className="mt-2 px-2 py-1 bg-green-500 text-white rounded-lg hover:bg-green-600 flex items-center gap-1">
                                 <FaCheckCircle className="w-5 h-5" /> Approve
                               </button>
-                              <button onClick={() => selectedUser && reject(selectedUser, file.index, file.cid)} className="mt-2 px-4 py-1 bg-red-500 text-white rounded-lg hover:bg-red-600 flex items-center gap-1">
+                              <button onClick={() => selectedUser && reject(selectedUser, file.index, file.cid)} className="mt-2 px-3 py-1 bg-red-500 text-white rounded-lg hover:bg-red-600 flex items-center gap-1">
                                 <FaBan className="w-5 h-5" /> Reject
                               </button>
                             </div>

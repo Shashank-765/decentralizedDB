@@ -440,7 +440,7 @@ function Header() {
             {menuOpen ? <IoClose /> : <IoMenu />}
           </button>
           <ul
-            className={`absolute top-full font-semibold left-0 w-full bg-gray-200 lg:hidden flex flex-col items-center z-[60]
+            className={`absolute top-full font-semibold left-0 w-full bg-gray-200 lg:hidden flex flex-col items-center z-[2]
              space-y-4 py-4 shadow-lg ${menuOpen ? "block" : "hidden"}`}
           >
             <div>

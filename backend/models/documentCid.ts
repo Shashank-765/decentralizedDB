@@ -6,6 +6,7 @@ export interface DocumentCid extends Document {
     type: string;
     approvedBy: string | null;
     rejectedBy: string | null;
+    fileSize: string;
 }
 
 const DocumentCidSchema = new Schema<DocumentCid>(
@@ -15,6 +16,7 @@ const DocumentCidSchema = new Schema<DocumentCid>(
         type: { type: String, required: true },
         approvedBy: { type: String, default: null },
         rejectedBy: { type: String, default: null },
+        fileSize: { type: String, default: "" },
     },
     { timestamps: true }
 )
