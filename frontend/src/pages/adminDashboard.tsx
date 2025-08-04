@@ -3,7 +3,7 @@ import { FaEye, FaCheckCircle, FaTimesCircle, FaUsers, FaChartPie, FaBan } from 
 import axios from "axios";
 import { ethers } from "ethers";
 import config from "../../config.json";
-import CircularLoader from "../CircularLoader/CircularLoader";
+import CircularLoader from "../Common/CircularLoader.tsx";
 import ToastMessage from "./toastmessage";
 import blockIcon from '../assets/prohibition.png';
 import unblock from '../assets/unlock.png';
@@ -50,6 +50,19 @@ export default function UserDashboard() {
   const location = useLocation();
   const adminLocalData = location.state?.admin;
   const localUserData = adminLocalData ? adminLocalData : JSON.parse(localStorage.getItem("user") || "{}");
+  const indexOfLastUser = currentPage * usersPerPage;
+  const indexOfFirstUser = indexOfLastUser - usersPerPage;
+  const currentUsers = users.slice(indexOfFirstUser, indexOfLastUser);
+  const totalApproved = users.reduce((count, user) => {
+    return count + user.fileLinks.filter((file: any) => file.approved == 1).length;
+  }, 0);
+  const totalRejected = users.reduce((count, user) => {
+    return count + user.fileLinks.filter((file: any) => file.approved == 2).length;
+  }, 0);
+  const totalPending = users.reduce((count, user) => {
+    return count + user.fileLinks.filter((file: any) => file.approved == 0).length;
+  }, 0);
+
   let signer;
   if (localUserData?.privateKey) {
     signer = new ethers.Wallet(localUserData?.privateKey, provider);
@@ -264,24 +277,11 @@ export default function UserDashboard() {
     }
   }
 
-
   const openModal = (user: any) => {
     setSelectedFiles(user.fileLinks);
     setSelectedUser(user.walletAddress);
     setShowModal(true);
   };
-  const indexOfLastUser = currentPage * usersPerPage;
-  const indexOfFirstUser = indexOfLastUser - usersPerPage;
-  const currentUsers = users.slice(indexOfFirstUser, indexOfLastUser);
-  const totalApproved = users.reduce((count, user) => {
-    return count + user.fileLinks.filter((file: any) => file.approved == 1).length;
-  }, 0);
-  const totalRejected = users.reduce((count, user) => {
-    return count + user.fileLinks.filter((file: any) => file.approved == 2).length;
-  }, 0);
-  const totalPending = users.reduce((count, user) => {
-    return count + user.fileLinks.filter((file: any) => file.approved == 0).length;
-  }, 0);
 
   const nextPage = () => {
     if (currentPage < Math.ceil(users.length / usersPerPage)) {

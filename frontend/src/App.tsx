@@ -72,7 +72,7 @@ function App() {
         pauseOnHover
         theme="light"
         style={{ marginTop: '110px' }}
-        />
+      />
       <Header />
       <Routes>
         <Route path="/" element={<Homepage />} />

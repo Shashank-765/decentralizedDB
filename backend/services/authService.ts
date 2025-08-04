@@ -61,17 +61,6 @@ export const loginUser = async (email: string, walletAddress: string, name: stri
     await user.save();
     return user;
 };
-export const userList = async (): Promise<IUser[]> => {
-    const users = await DocumentCidModel.find({});
-    if (!users) {
-        return [];
-    }
-    const allUserIds = users.map(user => user.userId);
-    const uniqueUserIds = [...new Set(allUserIds)];
-
-    const userData = await User.find({ _id: { $in: uniqueUserIds } });
-    return userData;
-};
 export const blockUser = async (id: string): Promise<IUser> => {
     const user = await User.findById(id);
     if (!user) {
@@ -107,14 +96,6 @@ export const addDocument = async (userId: string, cid: string, type: string, app
         throw new Error(error.message);
     }
 };
-export const getAllUsers = async (): Promise<IUser[]> => {
-    const users = await User.find({ userType: "User" });
-    return users;
-};
-export const getAllAdmins = async (): Promise<IUser[]> => {
-    const admins = await User.find({ userType: "Admin" });
-    return admins;
-};
 export const approvedDocument = async (cid: string, approvedBy: string): Promise<DocumentCid> => {
 
     const data = await DocumentCidModel.findOne({ cid })
@@ -135,48 +116,6 @@ export const rejectDocument = async (cid: string, rejectedBy: string): Promise<D
     await data.save();
     return data
 }
-// export const getGraphData = async (
-//     format: string,
-//     startDate: string,
-//     endDate: string
-// ): Promise<{ label: string; count: number }[]> => {
-
-//     try {
-//         const users = await User.aggregate([
-//             {
-//                 $match: {
-//                     userType: 'SuperAdmin',
-//                     createdAt: {
-//                         $gte: new Date(startDate + 'T00:00:00.000Z'),
-//                         $lte: new Date(endDate + 'T23:59:59.999Z')
-//                     }
-//                 }
-//             },
-//             {
-//                 $group: {
-//                     _id: {
-//                         $dateToString: {
-//                             format,
-//                             date: '$createdAt',
-//                             timezone: 'UTC' // Optional: ensures consistent date grouping
-//                         }
-//                     },
-//                     count: { $sum: 1 }
-//                 }
-//             },
-//             { $sort: { _id: 1 } }
-//         ]);
-
-//         return users.map((item) => ({
-//             label: item._id,
-//             count: item.count
-//         }));
-//     } catch (err) {
-//         console.error('Error in getGraphData:', err);
-//         return [];
-//     }
-// };
-
 export const getGraphData = async (
     format: string,
     startDate: string,
@@ -246,14 +185,11 @@ export const getGraphData = async (
       console.error('Error in getGraphData:', err);
       return { admins: [], users: [] };
     }
-  };
-  
+}; 
 export const userListByWalletAddress = async (walletAddress: string): Promise<IUser | null> => {
     const user = await User.findOne({ walletAddress });
     return user;
 }
-
-
 export const fakeDataToStore = async (): Promise<IUser[]> => {
 
     const usersFakeData = [
@@ -407,18 +343,10 @@ export const fakeDataToStore = async (): Promise<IUser[]> => {
     console.log(data)
     return data;
 }
-export const getOrganizationContractAddress = async (type: string): Promise<string> => {
-    const data = await User.findOne({ organization: type });
-    if (!data) {
-        throw new Error("Organization not found");
-    }
-    return data.orgContractAddress;
-}
 export const getAllOrganization = async (): Promise<IUser[]> => {
     const data = await User.find({ userType: "Admin" }).select("orgContractAddress organization");
     return data;
 }
-
 export const getAllAdminsByWalletAddress = async (
     walletAddresses: string
 ): Promise<IUser[] | null> => {

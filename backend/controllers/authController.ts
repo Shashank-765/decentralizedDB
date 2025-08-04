@@ -39,14 +39,6 @@ export const login = async (req: Request, res: Response) => {
         res.status(400).json({ error: error.message });
     }
 };
-export const userList = async (req: Request, res: Response) => {
-    try {
-        const user = await authService.userList();
-        res.status(200).json({ message: "User Fetched successful", user });
-    } catch (error: any) {
-        res.status(400).json({ error: error.message });
-    }
-};
 export const blockUser = async (req: Request, res: Response) => {
     try {
         const { id } = req.body;
@@ -70,22 +62,6 @@ export const addDocument = async (req: Request, res: Response) => {
         const { userId, cid, type, approvedBy } = req.body;
         const document = await authService.addDocument(userId, cid, type, approvedBy);
         res.status(200).json({ message: "Document added successfully", document });
-    } catch (error: any) {
-        res.status(400).json({ error: error.message });
-    }
-};
-export const getAllUsers = async (req: Request, res: Response) => {
-    try {
-        const user = await authService.getAllUsers();
-        res.status(200).json({ message: "User Fetched successful", user });
-    } catch (error: any) {
-        res.status(400).json({ error: error.message });
-    }
-};
-export const getAllAdmins = async (req: Request, res: Response) => {
-    try {
-        const admin = await authService.getAllAdmins();
-        res.status(200).json({ message: "Admin Fetched successful", admin });
     } catch (error: any) {
         res.status(400).json({ error: error.message });
     }
@@ -140,16 +116,6 @@ export const userListByWalletAddress = async (req: Request, res: Response) => {
         res.status(400).json({ error: error.message });
     }
 }
-export const getOrganizationContractAddress = async (req: Request, res: Response) => {
-    try {
-        const { type } = req.query;
-        const data = await authService.getOrganizationContractAddress(type as string);
-        res.status(200).json({ message: "Organization Contract Address Fetched successful", data });
-    } catch (error: any) {
-        res.status(400).json({ error: error.message });
-    }
-}
-
 export const getAllOrganization = async (req: Request, res: Response) => {
     try {
         const data = await authService.getAllOrganization();

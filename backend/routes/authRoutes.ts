@@ -1,8 +1,8 @@
 
 import express from "express";
 import {
-  createAdmin, login, userList, updateUser, getuserdata,
-  blockUser, unblockUser, addDocument, getAllUsers, getAllAdmins, approveDocument, rejectDocument, getGraphData, fakeDataToStore, userListByWalletAddress, getOrganizationContractAddress, getAllOrganization, getAllAdminsByWalletAddress
+  createAdmin, login, updateUser, getuserdata,
+  blockUser, unblockUser, addDocument, approveDocument, rejectDocument, getGraphData, fakeDataToStore, userListByWalletAddress, getAllOrganization, getAllAdminsByWalletAddress
 } from "../controllers/authController";
 import { authorize } from "../Authorization/Auth";
 
@@ -11,10 +11,7 @@ const router = express.Router();
 router.post("/createAdmin", authorize, createAdmin);
 router.post("/updateUser", authorize, updateUser);
 router.post("/login", login);
-router.get("/userList", userList);
 router.get("/getUserProfileData", getuserdata);
-router.get("/getAllUsers", getAllUsers);
-router.get("/getAllAdmins", getAllAdmins);
 router.post("/blockUser", authorize, blockUser);
 router.post("/unblockUser", authorize, unblockUser);
 router.post("/addDocument", authorize, addDocument);
@@ -24,7 +21,6 @@ router.get('/getGraphData', authorize, getGraphData)
 router.post('/fakeDataToStore', fakeDataToStore)
 router.get('/userListByWalletAddress', userListByWalletAddress)
 router.get('/getAllAdminsByWalletAddress', getAllAdminsByWalletAddress)
-router.get('/getOrganizationContractAddress', authorize, getOrganizationContractAddress)
 router.get('/getAllOrganization', getAllOrganization)
 
 export default router;

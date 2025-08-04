@@ -2,7 +2,7 @@ import React, { useRef, useEffect, useState } from "react";
 import { FiHome, FiUsers } from "react-icons/fi";
 import { FaCloudUploadAlt } from "react-icons/fa";
 import { create } from "ipfs-http-client";
-import CircularLoader from "../CircularLoader/CircularLoader";
+import CircularLoader from "../Common/CircularLoader.tsx";
 import ToastMessage from "./toastmessage";
 import { ethers } from "ethers";
 import config from '../../config.json';

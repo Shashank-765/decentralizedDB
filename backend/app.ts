@@ -4,7 +4,6 @@ import connectDB from './config/mongo.config'
 import authRoutes from "./routes/authRoutes";
 import { errorHandler } from "./middlewares/errorHandler";
 import session from "express-session";
-import { faker } from '@faker-js/faker';
 const app = express()
 connectDB()
 app.use(cors({

@@ -5,7 +5,7 @@ import { IoClose, IoMenu } from "react-icons/io5";
 import axios from "axios";
 import 'react-toastify/dist/ReactToastify.css';
 import ToastMessage from "./toastmessage";
-import CircularLoader from "../CircularLoader/CircularLoader";
+import CircularLoader from "../Common/CircularLoader";
 import walletImage from '../assets/wallet.png'
 import copyImage from '../assets/copy.png'
 import config from "../../config.json"
@@ -62,88 +62,11 @@ function Header() {
     getPrivateKey();
   }, [])
 
-
   useEffect(() => {
     if (user?.profileImage) {
       resolveProfileImage(user.profileImage);
     }
   }, [user?.profileImage]);
-
-  const resolveProfileImage = async (url: string) => {
-    const isGoogleImage = url.includes('googleusercontent.com');
-
-    if (!isGoogleImage) {
-      const valid = await verifyImage(url);
-      setProfile(valid ? url : '');
-      setIsValidImage(valid);
-      return;
-    }
-
-    const sizeVariants = ['=s512-c', '=s400-c', '=s300-c', ''];
-    const base = url.split('=')[0];
-
-    for (const variant of sizeVariants) {
-      const testUrl = base + variant;
-      const valid = await verifyImage(testUrl);
-      if (valid) {
-        setProfile(testUrl);
-        setIsValidImage(true);
-        return;
-      }
-    }
-
-    setIsValidImage(false);
-  };
-
-  const verifyImage = (url: string): Promise<boolean> => {
-    return new Promise((resolve) => {
-      if (!url) return resolve(false);
-
-      const img = new Image();
-      img.onload = () => resolve(true);
-      img.onerror = () => resolve(false);
-      img.crossOrigin = 'Anonymous';
-      img.referrerPolicy = 'no-referrer';
-
-      const cacheBuster = `cb=${Date.now()}`;
-      img.src = url + (url.includes('?') ? '&' : '?') + cacheBuster;
-    });
-  };
-
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        popupRef.current &&
-        !popupRef.current.contains(event.target as Node) &&
-        buttonRef.current &&
-        !buttonRef.current.contains(event.target as Node)
-      ) {
-        setOpen(false);
-      }
-    };
-
-    const timer = setTimeout(() => {
-      if (open) {
-        document.addEventListener('click', handleClickOutside);
-      }
-    }, 0);
-
-    return () => {
-      clearTimeout(timer);
-      document.removeEventListener('click', handleClickOutside);
-    };
-  }, [open]);
-
-  const login = (userData: any) => {
-    localStorage.setItem("user", JSON.stringify(userData));
-    ToastMessage("Login successfully", "success", "");
-  }
-  const logout = () => {
-    localStorage.removeItem("user");
-    ToastMessage("Logout successfully", "success", "");
-  }
-
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -193,17 +116,53 @@ function Header() {
     return () => clearTimeout(timer);
   }, [isConnected, userInfo]);
 
-  const toggleDropdown = () => {
-    setIsOpen(!isOpen);
-    setOpen(false);
-  };
-  const openProfile = () => {
-    setOpen(false);
-    setIsOpen(false)
-    setMenuOpen(false)
-    navigate("/profile");
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const res = await axios.get(`${config.URL_BACKEND}api/auth/user`, {
+          withCredentials: true
+        });
+        const logedinuser = {
+          userId: res.data.user._id,
+          name: res.data.user.name,
+          email: res.data.user.email,
+          walletAddress: res.data.user.walletAddress,
+          userType: res.data.user.userType,
+          token: res.data.user.token,
+        };
+        login(logedinuser);
+      } catch (err) {
+        console.error("User fetch failed", err);
+      }
+    };
+    if (searchParams.get("authSuccess") === "true") {
+      fetchUser();
+    }
+  }, []);
 
-  };
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        popupRef.current &&
+        !popupRef.current.contains(event.target as Node) &&
+        buttonRef.current &&
+        !buttonRef.current.contains(event.target as Node)
+      ) {
+        setOpen(false);
+      }
+    };
+
+    const timer = setTimeout(() => {
+      if (open) {
+        document.addEventListener('click', handleClickOutside);
+      }
+    }, 0);
+
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener('click', handleClickOutside);
+    };
+  }, [open]);
 
   useEffect(() => {
     if (isConnected && !isLogin && address && userInfo?.email) {
@@ -242,6 +201,71 @@ function Header() {
     }
   }, [isConnected, address, userInfo]);
 
+
+  const resolveProfileImage = async (url: string) => {
+    const isGoogleImage = url.includes('googleusercontent.com');
+
+    if (!isGoogleImage) {
+      const valid = await verifyImage(url);
+      setProfile(valid ? url : '');
+      setIsValidImage(valid);
+      return;
+    }
+
+    const sizeVariants = ['=s512-c', '=s400-c', '=s300-c', ''];
+    const base = url.split('=')[0];
+
+    for (const variant of sizeVariants) {
+      const testUrl = base + variant;
+      const valid = await verifyImage(testUrl);
+      if (valid) {
+        setProfile(testUrl);
+        setIsValidImage(true);
+        return;
+      }
+    }
+
+    setIsValidImage(false);
+  };
+
+  const verifyImage = (url: string): Promise<boolean> => {
+    return new Promise((resolve) => {
+      if (!url) return resolve(false);
+
+      const img = new Image();
+      img.onload = () => resolve(true);
+      img.onerror = () => resolve(false);
+      img.crossOrigin = 'Anonymous';
+      img.referrerPolicy = 'no-referrer';
+
+      const cacheBuster = `cb=${Date.now()}`;
+      img.src = url + (url.includes('?') ? '&' : '?') + cacheBuster;
+    });
+  };
+
+  const login = (userData: any) => {
+    localStorage.setItem("user", JSON.stringify(userData));
+    ToastMessage("Login successfully", "success", "");
+  }
+
+  const logout = () => {
+    localStorage.removeItem("user");
+    ToastMessage("Logout successfully", "success", "");
+  }
+
+  const toggleDropdown = () => {
+    setIsOpen(!isOpen);
+    setOpen(false);
+  };
+
+  const openProfile = () => {
+    setOpen(false);
+    setIsOpen(false)
+    setMenuOpen(false)
+    navigate("/profile");
+
+  };
+
   const disconnectWallet = async () => {
     await disconnect();
     setIsLogin(false);
@@ -249,30 +273,6 @@ function Header() {
     setIsOpen(false);
     navigate("/")
   }
-
-  useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        const res = await axios.get(`${config.URL_BACKEND}api/auth/user`, {
-          withCredentials: true
-        });
-        const logedinuser = {
-          userId: res.data.user._id,
-          name: res.data.user.name,
-          email: res.data.user.email,
-          walletAddress: res.data.user.walletAddress,
-          userType: res.data.user.userType,
-          token: res.data.user.token,
-        };
-        login(logedinuser);
-      } catch (err) {
-        console.error("User fetch failed", err);
-      }
-    };
-    if (searchParams.get("authSuccess") === "true") {
-      fetchUser();
-    }
-  }, []);
 
   const setPopupOpen = () => {
     setOpen(!open)
@@ -288,6 +288,7 @@ function Header() {
     setIsOpenModalQrPopup(true);
     setBalanceOpen(false);
   }
+
   const withdrawPopupHandler = () => {
     setIsOpenModalPopup(true);
     setBalanceOpen(false);
@@ -431,102 +432,103 @@ function Header() {
             </li>
           </ul>
 
-          {/* Mobile Menu Button */}
+          {/* Mobile View Menu Button */}
           <button
             onClick={() => setMenuOpen(!menuOpen)}
             className="lg:hidden text-gray-700 text-3xl"
           >
             {menuOpen ? <IoClose /> : <IoMenu />}
           </button>
-          {/* Mobile Menu */}
           <ul
             className={`absolute top-full font-semibold left-0 w-full bg-gray-200 lg:hidden flex flex-col items-center z-[1]
              space-y-4 py-4 shadow-lg ${menuOpen ? "block" : "hidden"}`}
           >
-            <li onClick={() => { setMenuOpen(!menuOpen) }}><Link to="/home" className="mobile-nav-link text-gray-700 font-semibold hover:text-gray-800 text-lg w-32 h-11 flex items-center justify-center rounded-full bg-white shadow-md hover:shadow-lg transition">Home</Link></li>
-            {user ? (
-              <>
-                <li>
-                  <Link
-                    to={`${user?.userType === "SuperAdmin" ? "/superadmin" : user?.userType === "Admin" ? "/adminDashboard" : user?.userType === "User" ? "/userDashboard" : "/not-found"}`}
-                    onClick={() => setMenuOpen(!menuOpen)}
-                    className="mobile-nav-link text-gray-700 font-semibold hover:text-gray-800 text-lg w-32 h-11 flex items-center justify-center rounded-full bg-white shadow-md hover:shadow-lg transition"
-                  >
-                    Dashboard
-                  </Link>
-                </li>
-                <li className="relative">
-                  <div
-                    className="text-gray-700 font-semibold hover:text-gray-800 text-lg pl-6 pr-6 h-11 flex items-center justify-center rounded-full bg-white shadow-md hover:shadow-lg transition cursor-pointer"
-                    onClick={() => setBalanceOpen2(!balanceOpen2)}
-                  >
-                    <img src={walletImage} className="w-5 h-5" alt="" />
-                    <p className="ml-2  max-w-[110px]">{Number(walletBalance).toFixed(2)} ETH</p>
-                    <svg
-                      className="w-4 h-4 ml-1 text-gray-600 flex-shrink-0"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      viewBox="0 0 24 24"
+            <div>
+              <li onClick={() => { setMenuOpen(!menuOpen) }}><Link to="/home" className="mobile-nav-link text-gray-700 font-semibold hover:text-gray-800 text-lg w-32 h-11 flex items-center justify-center rounded-full bg-white shadow-md hover:shadow-lg transition">Home</Link></li>
+              {user ? (
+                <>
+                  <li className="mt-4">
+                    <Link
+                      to={`${user?.userType === "SuperAdmin" ? "/superadmin" : user?.userType === "Admin" ? "/adminDashboard" : user?.userType === "User" ? "/userDashboard" : "/not-found"}`}
+                      onClick={() => setMenuOpen(!menuOpen)}
+                      className="mobile-nav-link text-gray-700 font-semibold hover:text-gray-800 text-lg w-32 h-11 flex items-center justify-center rounded-full bg-white shadow-md hover:shadow-lg transition"
                     >
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </div>
-                  {balanceOpen2 && (
+                      Dashboard
+                    </Link>
+                  </li>
+                  <li className="mt-4 relative">
                     <div
-                      ref={popupRef3}
-                      className="absolute top-full left-0 mt-1 ml-2 w-36 bg-white rounded-lg shadow-lg z-50 overflow-hidden"
+                      className="text-gray-700 font-semibold hover:text-gray-800 text-lg pl-6 pr-6 h-11 flex items-center justify-center rounded-full bg-white shadow-md hover:shadow-lg transition cursor-pointer"
+                      onClick={() => setBalanceOpen2(!balanceOpen2)}
                     >
-                      <button
-                        onClick={withdrawPopupHandler}
-                        className="block w-full text-center px-4 py-2 font-semibold text-gray-700 hover:bg-gray-100"
+                      <img src={walletImage} className="w-5 h-5" alt="" />
+                      <p className="ml-2  max-w-[110px]">{Number(walletBalance).toFixed(2)} ETH</p>
+                      <svg
+                        className="w-4 h-4 ml-1 text-gray-600 flex-shrink-0"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        viewBox="0 0 24 24"
                       >
-                        Transfer
-                      </button>
-                      <button
-                        onClick={QrPopupHandler}
-                        className="block w-full text-center px-4 py-2 font-semibold text-gray-600 hover:bg-gray-100"
-                      >
-                        Recieve
-                      </button>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                      </svg>
                     </div>
-                  )}
-                </li>
-              </>
-            ) : null}
-            <li>
-              {(user || !isConnected) ?
-                (
-                  <>
-
-                    {!isConnected && !user ? (
-                      <button
-                        onClick={() => connect()}
-                        className="text-gray-700 hover:text-gray-800 font-semibold text-lg w-32 h-11 flex items-center justify-center rounded-full bg-white shadow-md hover:shadow-lg transition"
+                    {balanceOpen2 && (
+                      <div
+                        ref={popupRef3}
+                        className="absolute top-full left-0 mt-1 ml-2 w-36 bg-white rounded-lg shadow-lg z-50 overflow-hidden"
                       >
-                        {!isConnected && !isUIReady ? <CircularLoader size={30} /> : "Connect"}
-                      </button>
-                    ) : (
-                      <div className="relative inline-block text-left">
                         <button
-                          onClick={openProfile}
-                          className="text-gray-700 hover:text-gray-800 font-semibold text-lg w-28 h-11 flex items-center justify-center rounded-full bg-white shadow-md hover:shadow-lg transition"
+                          onClick={withdrawPopupHandler}
+                          className="block w-full text-center px-4 py-2 font-semibold text-gray-700 hover:bg-gray-100"
                         >
-                          Profile
+                          Transfer
                         </button>
                         <button
-                          onClick={() => disconnectWallet()}
-                          className="text-red-800 hover:text-red-900 font-semibold text-lg w-32 h-11 flex items-center justify-center rounded-full bg-white shadow-md mt-4 hover:shadow-lg transition"
+                          onClick={QrPopupHandler}
+                          className="block w-full text-center px-4 py-2 font-semibold text-gray-600 hover:bg-gray-100"
                         >
-                          Logout
+                          Recieve
                         </button>
                       </div>
                     )}
-                  </>
-                ) : (
-                  <button onClick={() => connect()} className=" mobile-nav-link text-gray-700 font-semibold hover:text-gray-800 text-lg w-32 h-11 flex items-center justify-center rounded-full bg-white shadow-md hover:shadow-lg transition"> {isUIReady ? <CircularLoader size={20} /> : "Connect"}</button>
-                )}
-            </li>
+                  </li>
+                </>
+              ) : null}
+              <li>
+                {(user || !isConnected) ?
+                  (
+                    <>
+
+                      {!isConnected && !user ? (
+                        <button
+                          onClick={() => connect()}
+                          className="text-gray-700 hover:text-gray-800 mt-4 font-semibold text-lg w-32 h-11 flex items-center justify-center rounded-full bg-white shadow-md hover:shadow-lg transition"
+                        >
+                          {!isConnected && !isUIReady ? <CircularLoader size={30} /> : "Connect"}
+                        </button>
+                      ) : (
+                        <div className="relative inline-block text-left">
+                          <button
+                            onClick={openProfile}
+                            className="text-gray-700 hover:text-gray-800 mt-4 font-semibold text-lg w-28 h-11 flex items-center justify-center rounded-full bg-white shadow-md hover:shadow-lg transition"
+                          >
+                            Profile
+                          </button>
+                          <button
+                            onClick={() => disconnectWallet()}
+                            className="text-red-800 hover:text-red-900 font-semibold text-lg w-32 h-11 flex items-center justify-center rounded-full bg-white shadow-md mt-4 hover:shadow-lg transition"
+                          >
+                            Logout
+                          </button>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <button onClick={() => connect()} className=" mobile-nav-link text-gray-700 font-semibold hover:text-gray-800 text-lg w-32 h-11 flex items-center justify-center rounded-full bg-white shadow-md hover:shadow-lg transition"> {isUIReady ? <CircularLoader size={20} /> : "Connect"}</button>
+                  )}
+              </li>
+            </div>
 
           </ul>
         </nav>
