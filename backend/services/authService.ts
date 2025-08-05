@@ -123,7 +123,6 @@ export const getGraphData = async (
   endDate: string
 ): Promise<{ admins: any[]; users: any[]; documents: any[] }> => {
   try {
-    console.log(startDate, endDate, format,'format')
     const dateFilter = {
       $gte: new Date(`${startDate}T00:00:00.000Z`),
       $lte: new Date(`${endDate}T23:59:59.999Z`)
