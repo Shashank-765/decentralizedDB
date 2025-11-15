@@ -10,7 +10,7 @@ export const QrcodeModel = ({ walletAddress, onClose, logo }: { walletAddress: s
     const popupRef1 = useRef<HTMLDivElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const canvasSize = 300;
-    const circleRadius = 60; // Increased circle radius
+    const circleRadius = 55; // Increased circle radius
     const logoSize = circleRadius * 2;
 
     useEffect(() => {
